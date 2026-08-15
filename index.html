@@ -92,6 +92,26 @@
       </section>
 
       <section class="group">
+        <h2 data-i18n="matte.title">Garbage matte</h2>
+        <div class="row">
+          <button id="btnMatte" class="btn" data-i18n="matte.draw">Dibujar</button>
+          <button id="btnMatteClear" class="btn" data-i18n="matte.clear">Borrar</button>
+          <button id="btnMatteInvert" class="btn" data-i18n="matte.invert">Invertir</button>
+        </div>
+        <p class="hint" data-i18n="matte.hint">Pulsa «Dibujar» y haz clic para marcar un polígono alrededor del sujeto; lo de fuera se quita (o lo de dentro si inviertes).</p>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="plate.title">Clean plate</h2>
+        <div class="row">
+          <button id="btnPlate" class="btn" data-i18n="plate.capture">Capturar fondo vacío</button>
+          <button id="btnPlateClear" class="btn" data-i18n="plate.clear" hidden>Quitar</button>
+        </div>
+        <label class="check" id="plateUseWrap" hidden><input type="checkbox" id="plateUse" checked /> <span data-i18n="plate.use">Keyear por diferencia</span></label>
+        <p class="hint" data-i18n="plate.hint">Ve a un fotograma SIN sujeto (fondo vacío) y captúralo. El key comparará cada píxel con ese fondo: aguanta la iluminación desigual.</p>
+      </section>
+
+      <section class="group">
         <h2 data-i18n="view.title">Vista</h2>
         <div class="views">
           <button class="view active" data-mode="0" data-i18n="view.composite">Compuesto</button>
@@ -119,6 +139,7 @@
     <section class="stage" id="stage">
       <div class="canvas-wrap" id="canvasWrap">
         <canvas id="gl"></canvas>
+        <canvas id="overlay" class="overlay"></canvas>
         <div class="grid-labels" id="gridLabels" hidden>
           <span class="gl-label" style="left:0;top:0">R</span>
           <span class="gl-label" style="right:0;top:0">G</span>

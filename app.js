@@ -40,6 +40,18 @@ const I18N = {
     'bg.wrap': 'Light wrap',
     'bg.radius': 'Radio',
     'bg.hint': 'El compuesto se ve sobre esta imagen; el light wrap envuelve sus colores en los bordes del sujeto (solo en vista Compuesto).',
+    'matte.title': 'Garbage matte',
+    'matte.draw': 'Dibujar',
+    'matte.clear': 'Borrar',
+    'matte.invert': 'Invertir',
+    'matte.hint': 'Pulsa «Dibujar» y haz clic para marcar un polígono alrededor del sujeto; lo de fuera se quita (o lo de dentro si inviertes).',
+    'plate.title': 'Clean plate',
+    'plate.capture': 'Capturar fondo vacío',
+    'plate.clear': 'Quitar',
+    'plate.use': 'Keyear por diferencia',
+    'plate.hint': 'Ve a un fotograma SIN sujeto (fondo vacío) y captúralo. El key comparará cada píxel con ese fondo: aguanta la iluminación desigual.',
+    'nm.matte': 'Garbage',
+    'nm.plate': 'Clean plate',
     'scope.title': 'Scopes',
     'scope.off': 'Ninguno',
     'scope.hist': 'Histograma',
@@ -98,6 +110,18 @@ const I18N = {
     'bg.wrap': 'Light wrap',
     'bg.radius': 'Erradioa',
     'bg.hint': 'Konposatua irudi honen gainean ikusten da; light wrap-ek bere koloreak subjektuaren ertzetan biltzen ditu (Konposatua ikuspegian soilik).',
+    'matte.title': 'Garbage matte',
+    'matte.draw': 'Marraztu',
+    'matte.clear': 'Ezabatu',
+    'matte.invert': 'Alderantzikatu',
+    'matte.hint': 'Sakatu «Marraztu» eta egin klik subjektuaren inguruan poligono bat markatzeko; kanpokoa kentzen da (edo barrukoa alderantzikatzen baduzu).',
+    'plate.title': 'Clean plate',
+    'plate.capture': 'Hartu atzealde hutsa',
+    'plate.clear': 'Kendu',
+    'plate.use': 'Diferentziaz keyeatu',
+    'plate.hint': 'Joan subjekturik GABEKO fotograma batera (atzealde hutsa) eta hartu. Key-ak pixel bakoitza atzealde horrekin alderatuko du: argiztapen desorekatua jasaten du.',
+    'nm.matte': 'Garbage',
+    'nm.plate': 'Clean plate',
     'scope.title': 'Scope-ak',
     'scope.off': 'Bat ere ez',
     'scope.hist': 'Histograma',
@@ -156,6 +180,18 @@ const I18N = {
     'bg.wrap': 'Light wrap',
     'bg.radius': 'Radius',
     'bg.hint': 'The composite is shown over this image; light wrap wraps its colours onto the subject’s edges (Composite view only).',
+    'matte.title': 'Garbage matte',
+    'matte.draw': 'Draw',
+    'matte.clear': 'Clear',
+    'matte.invert': 'Invert',
+    'matte.hint': 'Press “Draw” and click to mark a polygon around the subject; everything outside is removed (or inside, if you invert).',
+    'plate.title': 'Clean plate',
+    'plate.capture': 'Capture empty screen',
+    'plate.clear': 'Remove',
+    'plate.use': 'Key by difference',
+    'plate.hint': 'Go to a frame with NO subject (empty screen) and capture it. The key then compares every pixel to that screen: it survives uneven lighting.',
+    'nm.matte': 'Garbage',
+    'nm.plate': 'Clean plate',
     'scope.title': 'Scopes',
     'scope.off': 'None',
     'scope.hist': 'Histogram',
@@ -242,6 +278,11 @@ uniform sampler2D uBgTex;  // imagen de fondo
 uniform int   uHasBg;      // 1 si hay fondo cargado
 uniform float uWrap;       // cantidad de light wrap 0..1
 uniform float uWrapRadius; // radio del light wrap en px
+uniform sampler2D uMatteTex; // garbage matte (polígono rasterizado)
+uniform int   uHasMatte;   // 1 si hay garbage matte
+uniform int   uMatteInvert;// invertir el matte
+uniform sampler2D uPlateTex; // clean plate (fondo vacío)
+uniform int   uUsePlate;   // 1 = keyear por diferencia con el clean plate
 
 // crominancia YCbCr (Rec.601)
 vec2 chroma(vec3 c) {
@@ -250,10 +291,23 @@ vec2 chroma(vec3 c) {
   return vec2(cb, cr);
 }
 
-float keyAlpha(vec3 col) {
-  float d = distance(chroma(col), chroma(uKey));
-  // dentro de la tolerancia => transparente (0); fuera => opaco (1)
+float keyAlpha(vec3 col, vec2 uv) {
+  float d;
+  if (uUsePlate == 1) {
+    // clean plate: diferencia RGB con el fondo vacío (corrige luz desigual)
+    d = distance(col, texture(uPlateTex, uv).rgb);
+  } else {
+    // chroma key: distancia de crominancia al color clave
+    d = distance(chroma(col), chroma(uKey));
+  }
   return smoothstep(uTol, uTol + uSoft, d);
+}
+
+// garbage matte: 1 dentro del polígono, 0 fuera (o al revés si se invierte)
+float matteAt(vec2 uv) {
+  if (uHasMatte == 0) return 1.0;
+  float m = texture(uMatteTex, uv).r;
+  return (uMatteInvert == 1) ? (1.0 - m) : m;
 }
 
 // despill: si el canal del croma supera a los otros, lo empuja hacia ellos
@@ -287,7 +341,7 @@ void main() {
     bool right = uv.x >= 0.5;
     bool top   = uv.y >= 0.5;   // vUv.y=1 arriba
     vec3 src = texture(uTex, q).rgb;
-    float a  = keyAlpha(src);
+    float a  = keyAlpha(src, q) * matteAt(q);
     float v;
     if (top && !right)      v = src.r;   // arriba-izq  R
     else if (top && right)  v = src.g;   // arriba-der  G
@@ -307,7 +361,7 @@ void main() {
     return;
   }
 
-  float a = keyAlpha(src.rgb);
+  float a = keyAlpha(src.rgb, uv) * matteAt(uv);
 
   if (uMode == 2) {                         // alpha (matte)
     outColor = vec4(vec3(a), 1.0);
@@ -328,7 +382,7 @@ void main() {
     for (int i = 0; i < N; i++) {
       float ph = 6.2831853 * float(i) / float(N);
       vec2 off = vec2(cos(ph), sin(ph)) * px;
-      near  += 1.0 - keyAlpha(texture(uTex, uv + off).rgb);  // cuánto fondo hay alrededor
+      near  += 1.0 - keyAlpha(texture(uTex, uv + off).rgb, uv + off);  // cuánto fondo hay alrededor
       bgAvg += texture(uBgTex, uv + off).rgb;
     }
     near  /= float(N);
@@ -385,6 +439,11 @@ const U = {
   hasBg: gl.getUniformLocation(prog, 'uHasBg'),
   wrap: gl.getUniformLocation(prog, 'uWrap'),
   wrapRadius: gl.getUniformLocation(prog, 'uWrapRadius'),
+  matteTex: gl.getUniformLocation(prog, 'uMatteTex'),
+  hasMatte: gl.getUniformLocation(prog, 'uHasMatte'),
+  matteInvert: gl.getUniformLocation(prog, 'uMatteInvert'),
+  plateTex: gl.getUniformLocation(prog, 'uPlateTex'),
+  usePlate: gl.getUniformLocation(prog, 'uUsePlate'),
 };
 
 function makeTex(unit) {
@@ -397,11 +456,15 @@ function makeTex(unit) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   return tx;
 }
-const tex = makeTex(0);     // primer plano (unidad 0)
-const bgTex = makeTex(1);   // fondo (unidad 1)
+const tex = makeTex(0);      // primer plano (unidad 0)
+const bgTex = makeTex(1);    // fondo (unidad 1)
+const matteTex = makeTex(2); // garbage matte (unidad 2)
+const plateTex = makeTex(3); // clean plate (unidad 3)
 gl.activeTexture(gl.TEXTURE0);
 gl.uniform1i(U.tex, 0);
 gl.uniform1i(U.bgTex, 1);
+gl.uniform1i(U.matteTex, 2);
+gl.uniform1i(U.plateTex, 3);
 
 /* ------------------------------------------------------------------ */
 /*  Estado                                                             */
@@ -422,6 +485,8 @@ const state = {
   wrapRadius: 8.0,
   webcam: false,
   webcamPaused: false,
+  matte: { active: false, points: [], has: false, invert: false },
+  plate: { has: false, use: false },
 };
 // canvas 2D auxiliar para muestrear color exacto (cuentagotas)
 const srcCanvas = document.createElement('canvas');
@@ -439,8 +504,13 @@ function render() {
   gl.uniform1i(U.hasBg, state.hasBg ? 1 : 0);
   gl.uniform1f(U.wrap, state.wrap);
   gl.uniform1f(U.wrapRadius, state.wrapRadius);
+  gl.uniform1i(U.hasMatte, state.matte.has ? 1 : 0);
+  gl.uniform1i(U.matteInvert, state.matte.invert ? 1 : 0);
+  gl.uniform1i(U.usePlate, (state.plate.has && state.plate.use) ? 1 : 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bgTex);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, matteTex);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, plateTex);
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
   if (state.hasImage) gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -475,27 +545,31 @@ function updateNodeMap() {
   const el = $('nodemap');
   if (!state.hasImage) { el.hidden = true; return; }
   el.hidden = false;
-  const m = state.mode, NW = 104, NH = 40, yC = 8 + NH / 2;
+  const m = state.mode, NW = 96, NH = 38, yC = 8 + NH / 2;
   const cls = (cur, lit) => (cur ? 'cur ' : '') + (lit ? 'lit' : '');
   const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba'][m]);
   const nodes = [
     { x: 6,   y: 8,  label: t('nm.source'),  cls: cls(m === 1 || m === 3, true), act: 1 },
-    { x: 150, y: 8,  label: t('nm.key'),     cls: cls(m === 2, true),            act: 2 },
-    { x: 294, y: 8,  label: t('nm.despill'), cls: cls(false, state.despill > 0), act: 0 },
-    { x: 470, y: 8,  label: t('nm.merge'),   cls: cls(false, true),              act: 0 },
-    { x: 614, y: 8,  label: outLabel,        cls: cls(m === 0, true),            act: 0 },
-    { x: 470, y: 72, label: t('nm.bg'),      cls: cls(false, state.hasBg), act: 0, off: !state.hasBg },
+    { x: 128, y: 8,  label: t('nm.key'),     cls: cls(m === 2, true),            act: 2 },
+    { x: 250, y: 8,  label: t('nm.matte'),   cls: cls(false, state.matte.has),   act: 2, off: !state.matte.has },
+    { x: 372, y: 8,  label: t('nm.despill'), cls: cls(false, state.despill > 0), act: 0 },
+    { x: 520, y: 8,  label: t('nm.merge'),   cls: cls(false, true),              act: 0 },
+    { x: 642, y: 8,  label: outLabel,        cls: cls(m === 0, true),            act: 0 },
+    { x: 128, y: 68, label: t('nm.plate'),   cls: cls(false, state.plate.has && state.plate.use), act: 2, off: !state.plate.has },
+    { x: 520, y: 68, label: t('nm.bg'),      cls: cls(false, state.hasBg),       act: 0, off: !state.hasBg },
   ];
   const link = (x1, y1, x2, y2, lit) =>
     `<line class="nm-link ${lit ? 'lit' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#nmArrow)"/>`;
-  let svg = '<svg viewBox="0 0 724 120" xmlns="http://www.w3.org/2000/svg">';
+  let svg = '<svg viewBox="0 0 752 116" xmlns="http://www.w3.org/2000/svg">';
   svg += '<defs><marker id="nmArrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5a6472"/></marker></defs>';
-  svg += link(110, yC, 150, yC);
-  svg += link(254, yC, 294, yC);
-  svg += link(398, yC, 470, yC);
-  svg += link(574, yC, 614, yC);
-  svg += link(522, 72, 522, 48, state.hasBg);                 // Fondo -> Merge
-  svg += `<text class="nm-badge ${state.hasBg && state.wrap > 0 ? '' : 'off'}" x="530" y="63">${t('nm.lw')}</text>`;
+  svg += link(102, yC, 128, yC);
+  svg += link(224, yC, 250, yC);
+  svg += link(346, yC, 372, yC);
+  svg += link(468, yC, 520, yC);
+  svg += link(616, yC, 642, yC);
+  svg += link(176, 68, 176, 46, state.plate.has && state.plate.use);   // Clean plate -> Key
+  svg += link(568, 68, 568, 46, state.hasBg);                          // Fondo -> Merge
+  svg += `<text class="nm-badge ${state.hasBg && state.wrap > 0 ? '' : 'off'}" x="576" y="60">${t('nm.lw')}</text>`;
   for (const n of nodes) {
     svg += `<g class="nm-node ${n.cls} ${n.off ? 'off' : ''}" data-act="${n.act}" transform="translate(${n.x},${n.y})">` +
       `<rect width="${NW}" height="${NH}" rx="8"/>` +
@@ -529,6 +603,75 @@ function setImageSource(source, w, h) {
   document.getElementById('dropHint').hidden = true;
   render();
   updateScopes();
+  if (state.matte.points.length) updateMatteTexture();
+  drawOverlay();
+}
+
+/* --- garbage matte (polígono rasterizado) y clean plate --- */
+const matteCanvas = document.createElement('canvas');
+const matteCtx = matteCanvas.getContext('2d');
+const plateCanvas = document.createElement('canvas');
+const plateCtx = plateCanvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const octx = overlay.getContext('2d');
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+function updateMatteTexture() {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  if (!w) return;
+  matteCanvas.width = w; matteCanvas.height = h;
+  matteCtx.clearRect(0, 0, w, h);
+  const pts = state.matte.points;
+  state.matte.has = pts.length >= 3;
+  if (state.matte.has) {
+    matteCtx.fillStyle = '#fff';
+    matteCtx.beginPath();
+    matteCtx.moveTo(pts[0].x * w, pts[0].y * h);
+    for (let i = 1; i < pts.length; i++) matteCtx.lineTo(pts[i].x * w, pts[i].y * h);
+    matteCtx.closePath(); matteCtx.fill();
+  }
+  gl.activeTexture(gl.TEXTURE2);
+  gl.bindTexture(gl.TEXTURE_2D, matteTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, matteCanvas);
+  gl.activeTexture(gl.TEXTURE0);
+}
+
+function drawOverlay() {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  if (!w) return;
+  overlay.width = w; overlay.height = h;
+  octx.clearRect(0, 0, w, h);
+  const pts = state.matte.points;
+  if (!pts.length) return;
+  octx.lineWidth = Math.max(2, w / 400);
+  octx.strokeStyle = '#ff7a66';
+  octx.fillStyle = 'rgba(255,122,102,0.15)';
+  octx.beginPath();
+  octx.moveTo(pts[0].x * w, pts[0].y * h);
+  for (let i = 1; i < pts.length; i++) octx.lineTo(pts[i].x * w, pts[i].y * h);
+  if (pts.length >= 3) { octx.closePath(); octx.fill(); }
+  octx.stroke();
+  octx.fillStyle = '#ff7a66';
+  const rp = Math.max(3, w / 200);
+  for (const p of pts) { octx.beginPath(); octx.arc(p.x * w, p.y * h, rp, 0, Math.PI * 2); octx.fill(); }
+}
+
+function captureCleanPlate() {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  if (!w) return;
+  plateCanvas.width = w; plateCanvas.height = h;
+  plateCtx.drawImage(srcCanvas, 0, 0);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.bindTexture(gl.TEXTURE_2D, plateTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, plateCanvas);
+  gl.activeTexture(gl.TEXTURE0);
+  state.plate.has = true; state.plate.use = true;
+  $('btnPlateClear').hidden = false;
+  $('plateUseWrap').hidden = false;
+  $('plateUse').checked = true;
+  render(); updateNodeMap();
 }
 
 function loadImageFile(file) {
@@ -1053,6 +1196,12 @@ function resetAll() {
   $('wrapRadius').value = '8'; $('wrapRadiusOut').textContent = '8';
   $('keyColor').value = '#00b140'; $('keySwatch').style.background = '#00b140';
   $('btnPick').classList.remove('on'); $('canvasWrap').classList.remove('picking');
+  // garbage matte + clean plate
+  state.matte = { active: false, points: [], has: false, invert: false };
+  state.plate = { has: false, use: false };
+  $('btnMatte').classList.remove('on'); $('btnMatteInvert').classList.remove('on');
+  $('btnPlateClear').hidden = true; $('plateUseWrap').hidden = true;
+  updateMatteTexture(); drawOverlay();
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
   document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
   document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
@@ -1091,11 +1240,17 @@ $('btnPick').addEventListener('click', () => {
   updatePickLabel();
 });
 canvas.addEventListener('click', (e) => {
-  if (!state.picking || !state.hasImage) return;
+  if (!state.hasImage) return;
   const r = canvas.getBoundingClientRect();
-  const ix = (e.clientX - r.left) / r.width * canvas.width;
-  const iy = (e.clientY - r.top) / r.height * canvas.height;
-  pickAt(ix, iy);
+  const nx = clamp01((e.clientX - r.left) / r.width);
+  const ny = clamp01((e.clientY - r.top) / r.height);
+  if (state.matte.active) {                    // añadir vértice al garbage matte
+    state.matte.points.push({ x: nx, y: ny });
+    updateMatteTexture(); drawOverlay(); render(); updateNodeMap();
+    return;
+  }
+  if (!state.picking) return;
+  pickAt(nx * canvas.width, ny * canvas.height);
   setView(0);   // salta a Compuesto para ver el resultado del key
 });
 function updatePickLabel() {
@@ -1120,6 +1275,35 @@ $('keyColor').addEventListener('input', (e) => {
 $('btnBg').addEventListener('click', () => $('bgInput').click());
 $('bgInput').addEventListener('change', (e) => { loadBackgroundFile(e.target.files[0]); });
 $('btnBgClear').addEventListener('click', clearBackground);
+
+// garbage matte
+$('btnMatte').addEventListener('click', () => {
+  state.matte.active = !state.matte.active;
+  $('btnMatte').classList.toggle('on', state.matte.active);
+  if (state.matte.active && state.picking) {   // sale del cuentagotas
+    state.picking = false; $('btnPick').classList.remove('on'); updatePickLabel();
+  }
+  wrap.classList.toggle('picking', state.matte.active || state.picking);
+});
+$('btnMatteClear').addEventListener('click', () => {
+  state.matte.points = []; state.matte.has = false;
+  updateMatteTexture(); drawOverlay(); render(); updateNodeMap();
+});
+$('btnMatteInvert').addEventListener('click', () => {
+  state.matte.invert = !state.matte.invert;
+  $('btnMatteInvert').classList.toggle('on', state.matte.invert);
+  render();
+});
+// clean plate
+$('btnPlate').addEventListener('click', captureCleanPlate);
+$('btnPlateClear').addEventListener('click', () => {
+  state.plate.has = false; state.plate.use = false;
+  $('btnPlateClear').hidden = true; $('plateUseWrap').hidden = true;
+  render(); updateNodeMap();
+});
+$('plateUse').addEventListener('change', (e) => {
+  state.plate.use = e.target.checked; render(); updateNodeMap();
+});
 $('wrap').addEventListener('input', (e) => {
   state.wrap = parseFloat(e.target.value);
   $('wrapOut').textContent = state.wrap.toFixed(2);
