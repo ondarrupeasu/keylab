@@ -10,6 +10,8 @@ const I18N = {
   es: {
     subtitle: 'Laboratorio de croma',
     reset: '↺ Reiniciar',
+    'help.btn': '? Ayuda',
+    'help.title': 'Guía rápida',
     'ex.title': 'Ejemplos de croma',
     'ex.green': 'Croma verde',
     'ex.blue': 'Croma azul',
@@ -71,10 +73,12 @@ const I18N = {
     'view.original': 'Original',
     'view.alpha': 'Alpha',
     'view.rgba': 'Canales RGBA',
+    'view.split': 'Partida',
     'view.hint.composite': 'Croma aplicado sobre cuadros: lo transparente deja ver el ajedrezado.',
     'view.hint.original': 'La imagen tal cual, sin key.',
     'view.hint.alpha': 'El matte: blanco = sujeto, negro = fondo. Su función es decir qué se ve.',
     'view.hint.rgba': 'Los 4 canales a la vez. Fíjate: en verde el canal G sale muy claro y el B más ruidoso.',
+    'view.hint.split': 'Original | alpha | compuesto a la vez, para comparar de un vistazo.',
     'drop.big': 'Carga una imagen o vídeo para empezar',
     'drop.small': 'o pulsa «Demo» para ver un croma de ejemplo',
     'foot.credits': 'CIFP Tartanga LHII · Realización A/V',
@@ -83,6 +87,8 @@ const I18N = {
   eu: {
     subtitle: 'Kroma laborategia',
     reset: '↺ Berrabiarazi',
+    'help.btn': '? Laguntza',
+    'help.title': 'Gida azkarra',
     'ex.title': 'Kroma adibideak',
     'ex.green': 'Kroma berdea',
     'ex.blue': 'Kroma urdina',
@@ -144,10 +150,12 @@ const I18N = {
     'view.original': 'Jatorrizkoa',
     'view.alpha': 'Alpha',
     'view.rgba': 'RGBA kanalak',
+    'view.split': 'Zatitua',
     'view.hint.composite': 'Kroma laukien gainean: gardena denak lauki-taula erakusten du.',
     'view.hint.original': 'Irudia bere horretan, key-rik gabe.',
     'view.hint.alpha': 'Mattea: zuria = subjektua, beltza = atzealdea. Zer ikusten den esaten du.',
     'view.hint.rgba': '4 kanalak batera. Begiratu: berdean G kanala oso argi ateratzen da eta B zaratatsuagoa.',
+    'view.hint.split': 'Jatorrizkoa | alpha | konposatua batera, begiratu batez alderatzeko.',
     'drop.big': 'Kargatu irudi edo bideo bat hasteko',
     'drop.small': 'edo sakatu «Demo» adibide bat ikusteko',
     'foot.credits': 'CIFP Tartanga LHII · Ikus-entzunezko Errealizazioa',
@@ -156,6 +164,8 @@ const I18N = {
   en: {
     subtitle: 'Chroma key lab',
     reset: '↺ Reset',
+    'help.btn': '? Help',
+    'help.title': 'Quick guide',
     'ex.title': 'Chroma examples',
     'ex.green': 'Green screen',
     'ex.blue': 'Blue screen',
@@ -217,10 +227,12 @@ const I18N = {
     'view.original': 'Original',
     'view.alpha': 'Alpha',
     'view.rgba': 'RGBA channels',
+    'view.split': 'Split',
     'view.hint.composite': 'Key applied over a checkerboard: transparent areas show it through.',
     'view.hint.original': 'The image as-is, no key.',
     'view.hint.alpha': 'The matte: white = subject, black = background. It decides what shows.',
     'view.hint.rgba': 'All 4 channels at once. Note: on green, the G channel is very bright and B is noisier.',
+    'view.hint.split': 'Original | alpha | composite at once, to compare at a glance.',
     'drop.big': 'Load an image or video to start',
     'drop.small': 'or press “Demo” to see an example key',
     'foot.credits': 'CIFP Tartanga LHII · A/V Production',
@@ -230,6 +242,43 @@ const I18N = {
 
 let lang = localStorage.getItem('keylab.lang') || 'es';
 let demoHintKey = null;   // clave i18n del ejemplo cargado (croma malo)
+
+/* Contenido del panel de ayuda (guía rápida) por idioma */
+const HELP = {
+  es: [
+    ['¿Qué es el chroma key?', 'Grabas al sujeto delante de un fondo de color uniforme (verde o azul) y ese color se vuelve transparente para poner otro fondo. Aquí trabajas sobre un fotograma congelado: mueves el timeline, eliges el cuadro y ves el key en ESE fotograma, sin reproducir.'],
+    ['Verde vs azul', 'Se elige el color más lejano a la piel. El verde suele dar una señal más limpia (la cámara capta más resolución en ese canal); el azul es más ruidoso, pero útil si en el vestuario o el atrezo hay verdes.'],
+    ['El canal alpha', 'Es el matte: blanco = sujeto (se ve), negro = fondo (se quita), grises = semitransparente (bordes, pelo). Es lo que decide qué se compone. Míralo en la vista «Alpha».'],
+    ['Vestuario', 'Nunca vistas al sujeto del color del croma: ropa verde sobre verde (o azul sobre azul) desaparece con el fondo. Por eso elegimos el color del croma según el vestuario, o al revés.'],
+    ['Tolerancia y suavizado', 'Con el cuentagotas eliges el color clave. La tolerancia es cuánto se parece un píxel a ese color para considerarlo fondo; el suavizado, cómo de progresivo es el borde.'],
+    ['Despill y light wrap', 'El despill quita el tinte del croma que rebota en los bordes del sujeto. Si cargas una imagen de fondo, el light wrap envuelve sus colores en el borde para integrar el sujeto.'],
+    ['Garbage matte y clean plate', 'Garbage matte: dibujas un polígono para tapar lo que sobra (pie de foco, micro, banderas). Clean plate: capturas un fotograma del fondo vacío y el key compara cada píxel con él, aguantando la iluminación desigual.'],
+    ['Scopes', 'Histograma, waveform, parade y vectorscopio muestran dónde caen los colores. En el vectorscopio, el aro coral marca el color del croma. Son la misma matemática que usan las mesas de realización.'],
+    ['Créditos', 'Fotos demo: “Girl in front of a green background” de PictureYouth (CC BY 2.0, Wikimedia Commons) y un retrato de Pexels. Scopes: matemática tipo FreeCut (MIT). Material docente de CIFP Tartanga LHII.'],
+  ],
+  eu: [
+    ['Zer da chroma key-a?', 'Subjektua kolore uniformeko atzealde baten aurrean grabatzen duzu (berdea edo urdina) eta kolore hori gardena bihurtzen da beste atzealde bat jartzeko. Hemen fotograma izoztu batekin lan egiten duzu: denbora-lerroa mugitu, markoa aukeratu eta key-a marko HORRETAN ikusi, erreproduzitu gabe.'],
+    ['Berdea vs urdina', 'Azaletik urrunen dagoen kolorea aukeratzen da. Berdeak seinale garbiagoa ematen du normalean; urdina zaratatsuagoa da, baina baliagarria jantzian edo atrezzoan berdeak badaude.'],
+    ['Alpha kanala', 'Mattea da: zuria = subjektua (ikusten da), beltza = atzealdea (kentzen da), grisak = erdi-gardena (ertzak, ilea). Zer konposatzen den erabakitzen du. Ikusi «Alpha» ikuspegian.'],
+    ['Jantzia', 'Ez jantzi subjektua kromaren kolorez: arropa berdea berdearen gainean (edo urdina urdinaren gainean) atzealdearekin desagertzen da. Horregatik aukeratzen da kromaren kolorea jantziaren arabera, edo alderantziz.'],
+    ['Tolerantzia eta leuntzea', 'Tanta-kontagailuarekin kolore gakoa aukeratzen duzu. Tolerantzia: pixel bat kolore horretatik zenbateraino hurbil dagoen atzealdetzat hartzeko; leuntzea: ertza zenbateraino progresiboa den.'],
+    ['Despill eta light wrap', 'Despill-ak subjektuaren ertzetan islatzen den kroma-tindua kentzen du. Atzealde-irudi bat kargatzen baduzu, light wrap-ek bere koloreak ertzean biltzen ditu subjektua integratzeko.'],
+    ['Garbage matte eta clean plate', 'Garbage matte: poligono bat marrazten duzu soberan dagoena estaltzeko (oin-fokua, mikroa). Clean plate: atzealde hutseko fotograma bat hartzen duzu eta key-ak pixel bakoitza harekin alderatzen du, argiztapen desorekatua jasanez.'],
+    ['Scope-ak', 'Histograma, waveform, parade eta bektorroskopioak koloreak non erortzen diren erakusten dute. Bektorroskopioan, koral eraztunak kromaren kolorea markatzen du.'],
+    ['Kredituak', 'Demo argazkiak: PictureYouth-en “Girl in front of a green background” (CC BY 2.0, Wikimedia) eta Pexels-eko erretratu bat. Scope-ak: FreeCut moduko matematika (MIT). CIFP Tartanga LHII-ren material didaktikoa.'],
+  ],
+  en: [
+    ['What is chroma key?', 'You shoot the subject in front of an even coloured screen (green or blue) and that colour becomes transparent so you can drop in another background. Here you work on a frozen frame: scrub the timeline, pick the frame and see the key on THAT frame, without playback.'],
+    ['Green vs blue', 'You pick the colour furthest from skin. Green usually gives a cleaner signal (the camera captures more resolution in that channel); blue is noisier but useful when wardrobe or props have greens.'],
+    ['The alpha channel', 'It is the matte: white = subject (kept), black = background (removed), greys = semi-transparent (edges, hair). It decides what gets composited. See the “Alpha” view.'],
+    ['Wardrobe', 'Never dress the subject in the screen colour: green clothes on green (or blue on blue) vanish with the background. So you choose the screen colour to suit wardrobe, or vice versa.'],
+    ['Tolerance and softness', 'The eyedropper picks the key colour. Tolerance is how close a pixel must be to that colour to count as background; softness is how gradual the edge is.'],
+    ['Despill and light wrap', 'Despill removes the screen tint that bounces onto the subject’s edges. If you load a background image, light wrap wraps its colours onto the edge to blend the subject in.'],
+    ['Garbage matte and clean plate', 'Garbage matte: draw a polygon to hide junk (light stands, mic, flags). Clean plate: capture a frame of the empty screen and the key compares each pixel to it, surviving uneven lighting.'],
+    ['Scopes', 'Histogram, waveform, parade and vectorscope show where the colours land. On the vectorscope, the coral ring marks the screen colour. Same maths the gallery scopes use.'],
+    ['Credits', 'Demo photos: “Girl in front of a green background” by PictureYouth (CC BY 2.0, Wikimedia Commons) and a portrait from Pexels. Scopes: FreeCut-style maths (MIT). Teaching material for CIFP Tartanga LHII.'],
+  ],
+};
 
 function applyLang() {
   const dict = I18N[lang] || I18N.es;
@@ -244,6 +293,7 @@ function applyLang() {
   updatePickLabel();
   updateExampleHint();
   if (typeof updateMatteLabel === 'function') updateMatteLabel();
+  if (!document.getElementById('helpModal').hidden) renderHelp();
 }
 function t(key) { return (I18N[lang] || I18N.es)[key] || key; }
 function updateExampleHint() {
@@ -362,6 +412,25 @@ void main() {
     // línea separadora sutil
     vec2 d = abs(uv - 0.5);
     if (d.x < 0.0015 || d.y < 0.0015) outColor.rgb = vec3(0.0);
+    return;
+  }
+
+  if (uMode == 4) {                         // vista partida: original | alpha | compuesto
+    float col = uv.x * 3.0;
+    vec2 luv = vec2(fract(col), uv.y);
+    vec3 s = texture(uTex, luv).rgb;
+    float av = keyAlpha(s, luv) * matteAt(luv);
+    vec3 outc;
+    if (col < 1.0)      outc = s;                                   // original
+    else if (col < 2.0) outc = vec3(av);                           // alpha
+    else {                                                          // compuesto
+      vec3 fg = despill(s);
+      vec3 bgc = (uHasBg == 1) ? texture(uBgTex, luv).rgb : checker(vUv * uRes);
+      outc = mix(bgc, fg, av);
+    }
+    outColor = vec4(outc, 1.0);
+    float dsep = min(abs(uv.x - 0.33333), abs(uv.x - 0.66667));
+    if (dsep < 0.001) outColor.rgb = vec3(0.05);                   // separadores
     return;
   }
 
@@ -544,11 +613,21 @@ function updateScopes() {
   window.KeyLabScopes.draw(state.scope, srcCanvas, $('scopeCanvas'), state.key);
 }
 
-// cambia la vista (0 compuesto, 1 original, 2 alpha, 3 rgba) y refleja la UI
+// tamaño del canvas GL: 3× ancho en vista partida, imagen normal en el resto
+function applyCanvasSize() {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  if (!w) return;
+  const sw = (state.mode === 4) ? w * 3 : w;
+  if (canvas.width !== sw || canvas.height !== h) { canvas.width = sw; canvas.height = h; }
+}
+
+// cambia la vista (0 compuesto, 1 original, 2 alpha, 3 rgba, 4 partida) y refleja la UI
 function setView(mode) {
   state.mode = mode;
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', +x.dataset.mode === mode));
   $('gridLabels').hidden = mode !== 3;
+  $('splitLabels').hidden = mode !== 4;
+  applyCanvasSize();
   updateViewHint();
   render();
   updateNodeMap();
@@ -557,18 +636,19 @@ function setView(mode) {
 // mapa de nodos (flujo de la señal, estilo Fusion): refleja el estado y es clicable
 function updateNodeMap() {
   $('dock').hidden = !state.hasImage;
+  $('scopeTabs').hidden = !state.hasImage;
   if (!state.hasImage) return;
   const el = $('nodemap');
   const m = state.mode, NW = 96, NH = 38, yC = 8 + NH / 2;
   const cls = (cur, lit) => (cur ? 'cur ' : '') + (lit ? 'lit' : '');
-  const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba'][m]);
+  const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba', 'view.split'][m]);
   const nodes = [
     { x: 6,   y: 8,  label: t('nm.source'),  cls: cls(m === 1 || m === 3, true), act: 1 },
     { x: 128, y: 8,  label: t('nm.key'),     cls: cls(m === 2, true),            act: 2 },
     { x: 250, y: 8,  label: t('nm.matte'),   cls: cls(false, state.matte.has),   act: 2, off: !state.matte.has },
     { x: 372, y: 8,  label: t('nm.despill'), cls: cls(false, state.despill > 0), act: 0 },
     { x: 520, y: 8,  label: t('nm.merge'),   cls: cls(false, true),              act: 0 },
-    { x: 642, y: 8,  label: outLabel,        cls: cls(m === 0, true),            act: 0 },
+    { x: 642, y: 8,  label: outLabel,        cls: cls(m === 0 || m === 4, true), act: 0 },
     { x: 128, y: 68, label: t('nm.plate'),   cls: cls(false, state.plate.has && state.plate.use), act: 2, off: !state.plate.has },
     { x: 520, y: 68, label: t('nm.bg'),      cls: cls(false, state.hasBg),       act: 0, off: !state.hasBg },
   ];
@@ -605,8 +685,7 @@ function setImageSource(source, w, h) {
   srcCanvas.height = th;
   srcCtx.drawImage(source, 0, 0, tw, th);
 
-  canvas.width = tw;
-  canvas.height = th;
+  applyCanvasSize();
 
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -861,7 +940,7 @@ function drawWebcamFrame() {
   const w = video.videoWidth, h = video.videoHeight;
   if (!w) return;
   if (srcCanvas.width !== w || srcCanvas.height !== h) {
-    srcCanvas.width = w; srcCanvas.height = h; canvas.width = w; canvas.height = h;
+    srcCanvas.width = w; srcCanvas.height = h; applyCanvasSize();
   }
   srcCtx.drawImage(video, 0, 0, w, h);
   gl.activeTexture(gl.TEXTURE0);
@@ -1220,13 +1299,25 @@ function resetAll() {
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
   document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
   document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
-  ['gridLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'dock', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
+  ['gridLabels', 'splitLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'scopeTabs', 'dock', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
   $('dropHint').hidden = false;
   updateKeyChan(); updateViewHint(); updatePickLabel(); updateExampleHint();
   canvas.width = 300; canvas.height = 150;
   render();
 }
 $('btnReset').addEventListener('click', resetAll);
+
+// panel de ayuda
+function renderHelp() {
+  const secs = HELP[lang] || HELP.es;
+  $('helpBody').innerHTML = secs.map((s) => `<h3>${s[0]}</h3><p>${s[1]}</p>`).join('');
+}
+function openHelp() { renderHelp(); $('helpModal').hidden = false; }
+function closeHelp() { $('helpModal').hidden = true; }
+$('btnHelp').addEventListener('click', openHelp);
+$('helpClose').addEventListener('click', closeHelp);
+$('helpBackdrop').addEventListener('click', closeHelp);
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHelp(); });
 
 // guardar PNG del fotograma (la vista actual; compuesto sin fondo = transparente)
 function savePNG() {
@@ -1406,7 +1497,7 @@ document.querySelectorAll('.view').forEach((b) => {
   b.addEventListener('click', () => setView(parseInt(b.dataset.mode, 10)));
 });
 function updateViewHint() {
-  const keys = ['view.hint.composite', 'view.hint.original', 'view.hint.alpha', 'view.hint.rgba'];
+  const keys = ['view.hint.composite', 'view.hint.original', 'view.hint.alpha', 'view.hint.rgba', 'view.hint.split'];
   $('viewHint').textContent = t(keys[state.mode]);
 }
 

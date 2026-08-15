@@ -17,6 +17,7 @@
       <span class="tag" data-i18n="subtitle">Laboratorio de croma</span>
     </div>
     <div class="top-actions">
+      <button id="btnHelp" class="btn" data-i18n="help.btn">? Ayuda</button>
       <button id="btnReset" class="btn" data-i18n="reset">↺ Reiniciar</button>
       <div class="langs" role="group" aria-label="Idioma">
         <button class="lang" data-lang="es">ES</button>
@@ -118,6 +119,7 @@
           <button class="view" data-mode="1" data-i18n="view.original">Original</button>
           <button class="view" data-mode="2" data-i18n="view.alpha">Alpha</button>
           <button class="view" data-mode="3" data-i18n="view.rgba">Canales RGBA</button>
+          <button class="view" data-mode="4" data-i18n="view.split">Partida</button>
         </div>
         <p class="hint" id="viewHint" data-i18n="view.hint.composite">Croma aplicado sobre cuadros: lo transparente deja ver el ajedrezado.</p>
         <button id="btnPng" class="btn" data-i18n="save.png" style="margin-top:10px;width:100%">⬇ Guardar PNG</button>
@@ -126,6 +128,7 @@
 
     <!-- Escenario -->
     <section class="stage" id="stage">
+      <div class="viewport">
       <div class="canvas-wrap" id="canvasWrap">
         <canvas id="gl"></canvas>
         <canvas id="overlay" class="overlay"></canvas>
@@ -135,50 +138,55 @@
           <span class="gl-label" style="left:0;bottom:0">B</span>
           <span class="gl-label" style="right:0;bottom:0">A</span>
         </div>
+        <div class="split-labels" id="splitLabels" hidden>
+          <span data-i18n="view.original">Original</span>
+          <span data-i18n="view.alpha">Alpha</span>
+          <span data-i18n="view.composite">Compuesto</span>
+        </div>
         <div class="drop-hint" id="dropHint">
           <p data-i18n="drop.big">Carga una imagen o vídeo para empezar</p>
           <p class="small" data-i18n="drop.small">o pulsa «Demo» para ver un croma de ejemplo</p>
         </div>
       </div>
-
-      <div class="transport" id="transport" hidden>
-        <button id="framePrev" class="tbtn" title="Fotograma anterior">◄</button>
-        <input id="timeline" type="range" min="0" max="0" step="0.001" value="0" />
-        <button id="frameNext" class="tbtn" title="Fotograma siguiente">►</button>
-        <select id="fpsSel" class="fpssel" title="Fotogramas por segundo">
-          <option value="auto">Auto</option>
-          <option value="23.976">23.976</option>
-          <option value="24">24</option>
-          <option value="25">25</option>
-          <option value="29.97">29.97</option>
-          <option value="30">30</option>
-          <option value="48">48</option>
-          <option value="50">50</option>
-          <option value="59.94">59.94</option>
-          <option value="60">60</option>
-        </select>
-        <span class="tcode" id="timecode">0:00.00</span>
       </div>
-      <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
 
-      <div class="webcam-bar" id="webcamBar" hidden>
-        <span class="live-dot"></span>
-        <span data-i18n="webcam.live">En directo</span>
-        <button id="btnFreeze" class="btn" data-i18n="webcam.freeze">Congelar</button>
+      <div class="scope-tabs" id="scopeTabs" hidden>
+        <button class="scope" data-scope="histogram" data-i18n="scope.hist">Histograma</button>
+        <button class="scope" data-scope="waveform" data-i18n="scope.wave">Waveform</button>
+        <button class="scope" data-scope="parade" data-i18n="scope.parade">Parade</button>
+        <button class="scope" data-scope="vectorscope" data-i18n="scope.vector">Vectorscopio</button>
       </div>
 
       <div class="dock" id="dock" hidden>
         <div class="dock-left">
+          <div class="transport" id="transport" hidden>
+            <button id="framePrev" class="tbtn" title="Fotograma anterior">◄</button>
+            <input id="timeline" type="range" min="0" max="0" step="0.001" value="0" />
+            <button id="frameNext" class="tbtn" title="Fotograma siguiente">►</button>
+            <select id="fpsSel" class="fpssel" title="Fotogramas por segundo">
+              <option value="auto">Auto</option>
+              <option value="23.976">23.976</option>
+              <option value="24">24</option>
+              <option value="25">25</option>
+              <option value="29.97">29.97</option>
+              <option value="30">30</option>
+              <option value="48">48</option>
+              <option value="50">50</option>
+              <option value="59.94">59.94</option>
+              <option value="60">60</option>
+            </select>
+            <span class="tcode" id="timecode">0:00.00</span>
+          </div>
+          <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
+          <div class="webcam-bar" id="webcamBar" hidden>
+            <span class="live-dot"></span>
+            <span data-i18n="webcam.live">En directo</span>
+            <button id="btnFreeze" class="btn" data-i18n="webcam.freeze">Congelar</button>
+          </div>
           <span class="dock-title" data-i18n="nm.title">Pipeline</span>
           <div class="nodemap" id="nodemap"></div>
         </div>
         <div class="dock-right">
-          <div class="scope-tabs">
-            <button class="scope" data-scope="histogram" data-i18n="scope.hist">Histograma</button>
-            <button class="scope" data-scope="waveform" data-i18n="scope.wave">Waveform</button>
-            <button class="scope" data-scope="parade" data-i18n="scope.parade">Parade</button>
-            <button class="scope" data-scope="vectorscope" data-i18n="scope.vector">Vectorscopio</button>
-          </div>
           <div class="scopes" id="scopes" hidden>
             <canvas id="scopeCanvas"></canvas>
             <p class="hint" id="scopeHint" data-i18n="scope.hint">En el vectorscopio, el aro coral marca dónde cae el color de croma.</p>
@@ -191,6 +199,15 @@
   <footer class="foot">
     <span data-i18n="foot.credits">CIFP Tartanga LHII · Realización A/V</span>
   </footer>
+
+  <div class="modal" id="helpModal" hidden>
+    <div class="modal-backdrop" id="helpBackdrop"></div>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <button class="modal-close" id="helpClose" aria-label="Cerrar">✕</button>
+      <h2 class="modal-title">KeyLab · <span data-i18n="help.title">Guía rápida</span></h2>
+      <div class="modal-body" id="helpBody"></div>
+    </div>
+  </div>
 
   <script src="scopes.js"></script>
   <script src="app.js"></script>
