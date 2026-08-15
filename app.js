@@ -24,6 +24,7 @@ const I18N = {
     'webcam.freeze': 'Congelar',
     'webcam.resume': 'Reanudar',
     'webcam.error': 'No se pudo acceder a la cámara. Da permiso al navegador (y usa https).',
+    'nm.title': 'Pipeline',
     'nm.source': 'Fuente',
     'nm.key': 'Key',
     'nm.despill': 'Despill',
@@ -64,6 +65,7 @@ const I18N = {
     'key.pick': 'Cuentagotas',
     'key.tolerance': 'Tolerancia',
     'key.softness': 'Suavizado',
+    'save.png': '⬇ Guardar PNG',
     'view.title': 'Vista',
     'view.composite': 'Compuesto',
     'view.original': 'Original',
@@ -95,6 +97,7 @@ const I18N = {
     'webcam.freeze': 'Izoztu',
     'webcam.resume': 'Berrekin',
     'webcam.error': 'Ezin izan da kamera atzitu. Eman baimena nabigatzaileari (eta erabili https).',
+    'nm.title': 'Pipeline',
     'nm.source': 'Iturria',
     'nm.key': 'Key',
     'nm.despill': 'Despill',
@@ -135,6 +138,7 @@ const I18N = {
     'key.pick': 'Tanta-kontagailua',
     'key.tolerance': 'Tolerantzia',
     'key.softness': 'Leuntzea',
+    'save.png': '⬇ Gorde PNG',
     'view.title': 'Ikuspegia',
     'view.composite': 'Konposatua',
     'view.original': 'Jatorrizkoa',
@@ -166,6 +170,7 @@ const I18N = {
     'webcam.freeze': 'Freeze',
     'webcam.resume': 'Resume',
     'webcam.error': 'Could not access the camera. Grant the browser permission (and use https).',
+    'nm.title': 'Pipeline',
     'nm.source': 'Source',
     'nm.key': 'Key',
     'nm.despill': 'Despill',
@@ -206,6 +211,7 @@ const I18N = {
     'key.pick': 'Eyedropper',
     'key.tolerance': 'Tolerance',
     'key.softness': 'Softness',
+    'save.png': '⬇ Save PNG',
     'view.title': 'View',
     'view.composite': 'Composite',
     'view.original': 'Original',
@@ -251,7 +257,7 @@ function updateExampleHint() {
 /*  WebGL2                                                             */
 /* ------------------------------------------------------------------ */
 const canvas = document.getElementById('gl');
-const gl = canvas.getContext('webgl2', { premultipliedAlpha: false, antialias: false });
+const gl = canvas.getContext('webgl2', { premultipliedAlpha: false, antialias: false, preserveDrawingBuffer: true });
 if (!gl) {
   document.getElementById('dropHint').innerHTML =
     '<p>Tu navegador no soporta WebGL2</p>';
@@ -287,6 +293,7 @@ uniform int   uHasMatte;   // 1 si hay garbage matte
 uniform int   uMatteInvert;// invertir el matte
 uniform sampler2D uPlateTex; // clean plate (fondo vacío)
 uniform int   uUsePlate;   // 1 = keyear por diferencia con el clean plate
+uniform int   uExportAlpha;// 1 = salida con alpha real (PNG transparente)
 
 // crominancia YCbCr (Rec.601)
 vec2 chroma(vec3 c) {
@@ -395,6 +402,7 @@ void main() {
     fg = mix(fg, bgAvg, clamp(uWrap * mask, 0.0, 1.0));
   }
 
+  if (uExportAlpha == 1) { outColor = vec4(fg, a); return; }   // PNG transparente
   outColor = vec4(mix(bg, fg, a), 1.0);
 }`;
 
@@ -448,6 +456,7 @@ const U = {
   matteInvert: gl.getUniformLocation(prog, 'uMatteInvert'),
   plateTex: gl.getUniformLocation(prog, 'uPlateTex'),
   usePlate: gl.getUniformLocation(prog, 'uUsePlate'),
+  exportAlpha: gl.getUniformLocation(prog, 'uExportAlpha'),
 };
 
 function makeTex(unit) {
@@ -511,6 +520,7 @@ function render() {
   gl.uniform1i(U.hasMatte, state.matte.has ? 1 : 0);
   gl.uniform1i(U.matteInvert, state.matte.invert ? 1 : 0);
   gl.uniform1i(U.usePlate, (state.plate.has && state.plate.use) ? 1 : 0);
+  gl.uniform1i(U.exportAlpha, 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bgTex);
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, matteTex);
@@ -528,9 +538,9 @@ function updateKeyChan() {
 
 // redibuja el scope activo sobre el fotograma actual
 function updateScopes() {
-  const dock = $('scopes');
-  if (state.scope === 'off' || !state.hasImage) { dock.hidden = true; return; }
-  dock.hidden = false;
+  const sc = $('scopes');
+  if (state.scope === 'off' || !state.hasImage) { sc.hidden = true; return; }
+  sc.hidden = false;
   window.KeyLabScopes.draw(state.scope, srcCanvas, $('scopeCanvas'), state.key);
 }
 
@@ -546,9 +556,9 @@ function setView(mode) {
 
 // mapa de nodos (flujo de la señal, estilo Fusion): refleja el estado y es clicable
 function updateNodeMap() {
+  $('dock').hidden = !state.hasImage;
+  if (!state.hasImage) return;
   const el = $('nodemap');
-  if (!state.hasImage) { el.hidden = true; return; }
-  el.hidden = false;
   const m = state.mode, NW = 96, NH = 38, yC = 8 + NH / 2;
   const cls = (cur, lit) => (cur ? 'cur ' : '') + (lit ? 'lit' : '');
   const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba'][m]);
@@ -1210,13 +1220,30 @@ function resetAll() {
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
   document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
   document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
-  ['gridLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'nodemap', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
+  ['gridLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'dock', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
   $('dropHint').hidden = false;
   updateKeyChan(); updateViewHint(); updatePickLabel(); updateExampleHint();
   canvas.width = 300; canvas.height = 150;
   render();
 }
 $('btnReset').addEventListener('click', resetAll);
+
+// guardar PNG del fotograma (la vista actual; compuesto sin fondo = transparente)
+function savePNG() {
+  if (!state.hasImage) return;
+  const transparent = (state.mode === 0 && !state.hasBg);
+  render();                                    // frame actual
+  gl.uniform1i(U.exportAlpha, transparent ? 1 : 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);           // redibuja con la salida de exportación
+  const url = canvas.toDataURL('image/png');   // captura síncrona
+  gl.uniform1i(U.exportAlpha, 0);
+  render();                                    // restaura la vista
+  const names = ['compuesto', 'original', 'alpha', 'canales'];
+  const a = document.createElement('a');
+  a.href = url; a.download = 'keylab-' + names[state.mode] + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+$('btnPng').addEventListener('click', savePNG);
 
 // timeline (scrub) + fotograma ±1
 $('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
@@ -1386,9 +1413,8 @@ function updateViewHint() {
 // scopes
 document.querySelectorAll('.scope').forEach((b) => {
   b.addEventListener('click', () => {
-    document.querySelectorAll('.scope').forEach((x) => x.classList.remove('active'));
-    b.classList.add('active');
-    state.scope = b.dataset.scope;
+    state.scope = (state.scope === b.dataset.scope) ? 'off' : b.dataset.scope;   // toggle
+    document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === state.scope));
     updateScopes();
   });
 });

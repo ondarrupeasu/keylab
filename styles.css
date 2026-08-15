@@ -163,7 +163,6 @@ input[type="range"]::-moz-range-thumb {
 }
 .view:hover, .scope:hover, .ex:hover { color: var(--text); border-color: #3a4150; }
 .view.active, .scope.active, .ex.active { color: var(--coral-2); background: var(--coral-dim); border-color: var(--coral); }
-.scope[data-scope="vectorscope"] { grid-column: span 2; }
 
 /* ---- Stage ---- */
 .stage {
@@ -172,9 +171,9 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
-  padding: 24px;
+  padding: 18px 24px;
   background:
     radial-gradient(1200px 600px at 50% -10%, #191c22, var(--bg));
   overflow: hidden;
@@ -220,20 +219,30 @@ input[type="range"]::-moz-range-thumb {
 .frozen-hint { text-align: center; margin: 0; }
 .frozen-hint[hidden] { display: none; }
 
-/* scopes: flotante en la esquina inferior derecha (no encoge la imagen) */
-.scopes {
-  position: absolute; right: 12px; bottom: 12px;
-  width: 44%; max-width: 440px; z-index: 6; margin: 0;
+/* dock inferior: pipeline (izq) + scopes (der) */
+.dock {
+  display: flex; gap: 16px; width: 100%;
+  flex: 1 1 auto; min-height: 0;
 }
+.dock[hidden] { display: none; }
+.dock-left, .dock-right { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.dock-left { align-items: center; justify-content: center; }
+.dock-title {
+  align-self: flex-start;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--muted); font-weight: 700;
+}
+.scope-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.scopes { width: 100%; margin: 0; }
 .scopes[hidden] { display: none; }
 #scopeCanvas {
   width: 100%; height: auto;
   display: block;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(12, 14, 18, 0.94);
-  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  background: #0c0e12;
 }
+.scopes .hint { margin: 6px 0 0; }
 .canvas-wrap {
   position: relative;
   max-width: 100%;
@@ -246,7 +255,7 @@ input[type="range"]::-moz-range-thumb {
 canvas#gl {
   display: block;
   max-width: 100%;
-  max-height: calc(100vh - 190px);
+  max-height: 50vh;
   width: auto; height: auto;
   background: #0e1013;
 }
@@ -306,13 +315,11 @@ canvas#gl {
 
 /* mapa de nodos (flujo de señal, estilo Fusion) */
 .nodemap {
-  position: absolute; left: 12px; bottom: 12px;
-  width: 46%; max-width: 470px; z-index: 6;
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(16, 19, 26, 0.9);
-  padding: 6px 8px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  background: #10131a;
+  padding: 8px 10px;
 }
 .nodemap[hidden] { display: none; }
 .nodemap svg { width: 100%; height: auto; display: block; }
@@ -346,5 +353,7 @@ canvas#gl {
 @media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; }
   .panel { border-right: 0; border-bottom: 1px solid var(--line); }
-  canvas#gl { max-height: 52vh; }
+  canvas#gl { max-height: 46vh; }
+  .dock { flex-direction: column; }
+  .scope-tabs { grid-template-columns: repeat(2, 1fr); }
 }
