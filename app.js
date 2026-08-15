@@ -32,6 +32,9 @@ const I18N = {
     'nm.despill': 'Despill',
     'nm.bg': 'Fondo',
     'nm.merge': 'Merge',
+    'nm.output': 'Output',
+    'nm.output': 'Irteera',
+    'nm.output': 'Salida',
     'nm.lw': 'light wrap',
     'media.frozen': 'Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.',
     'media.badcodec': 'No se puede decodificar este vídeo en el navegador (¿ProRes o HEVC?). Prueba con MP4 (H.264) o WebM.',
@@ -669,30 +672,35 @@ function updateNodeMap() {
   if (!state.hasImage) return;
   const el = $('nodemap');
   const m = state.mode, NW = 96, NH = 38, yC = 8 + NH / 2;
-  const cls = (cur, lit) => (cur ? 'cur ' : '') + (lit ? 'lit' : '');
-  const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba', 'view.split'][m]);
+  // hasta dónde llega la señal que se está viendo (0 Fuente … 5 Salida)
+  let tap;
+  if (m === 1 || m === 3) tap = 0;        // Original / Canales -> hasta Fuente
+  else if (m === 2) tap = 1;              // Alpha -> hasta Key
+  else tap = 5;                            // Compuesto / Partida -> toda la cadena
+  // nodo iluminado solo si está dentro del tramo visto; el del final del tramo = "cur"
+  const line = (i) => (i === tap ? 'cur ' : '') + (i <= tap ? 'lit' : '');
   const nodes = [
-    { x: 6,   y: 8,  label: t('nm.source'),  cls: cls(m === 1 || m === 3, true), act: 1 },
-    { x: 128, y: 8,  label: t('nm.key'),     cls: cls(m === 2, true),            act: 2 },
-    { x: 250, y: 8,  label: t('nm.matte'),   cls: cls(false, state.matte.has),   act: 2, off: !state.matte.has },
-    { x: 372, y: 8,  label: t('nm.despill'), cls: cls(false, state.despill > 0), act: 0 },
-    { x: 520, y: 8,  label: t('nm.merge'),   cls: cls(false, true),              act: 0 },
-    { x: 642, y: 8,  label: outLabel,        cls: cls(m === 0 || m === 4, true), act: 0 },
-    { x: 128, y: 68, label: t('nm.plate'),   cls: cls(false, state.plate.has && state.plate.use), act: 2, off: !state.plate.has },
-    { x: 520, y: 68, label: t('nm.bg'),      cls: cls(false, state.hasBg),       act: 0, off: !state.hasBg },
+    { x: 6,   y: 8,  label: t('nm.source'),  cls: line(0), act: 1 },
+    { x: 128, y: 8,  label: t('nm.key'),     cls: line(1), act: 2 },
+    { x: 250, y: 8,  label: t('nm.matte'),   cls: state.matte.has ? line(2) : '', off: !state.matte.has, act: 2 },
+    { x: 372, y: 8,  label: t('nm.despill'), cls: state.despill > 0 ? line(3) : '', act: 0 },
+    { x: 520, y: 8,  label: t('nm.merge'),   cls: line(4), act: 0 },
+    { x: 642, y: 8,  label: t('nm.output'),  cls: line(5), act: 0 },
+    { x: 128, y: 68, label: t('nm.plate'),   cls: (state.plate.has && state.plate.use && tap >= 1) ? 'lit' : '', off: !state.plate.has, act: 2 },
+    { x: 520, y: 68, label: t('nm.bg'),      cls: (state.hasBg && tap >= 4) ? 'lit' : '', off: !state.hasBg, act: 0 },
   ];
   const link = (x1, y1, x2, y2, lit) =>
     `<line class="nm-link ${lit ? 'lit' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#nmArrow)"/>`;
   let svg = '<svg viewBox="0 0 752 116" xmlns="http://www.w3.org/2000/svg">';
   svg += '<defs><marker id="nmArrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5a6472"/></marker></defs>';
-  svg += link(102, yC, 128, yC);
-  svg += link(224, yC, 250, yC);
-  svg += link(346, yC, 372, yC);
-  svg += link(468, yC, 520, yC);
-  svg += link(616, yC, 642, yC);
-  svg += link(176, 68, 176, 46, state.plate.has && state.plate.use);   // Clean plate -> Key
-  svg += link(568, 68, 568, 46, state.hasBg);                          // Fondo -> Merge
-  svg += `<text class="nm-badge ${state.hasBg && state.wrap > 0 ? '' : 'off'}" x="576" y="60">${t('nm.lw')}</text>`;
+  svg += link(102, yC, 128, yC, tap >= 1);   // Fuente -> Key
+  svg += link(224, yC, 250, yC, tap >= 2);   // Key -> Garbage
+  svg += link(346, yC, 372, yC, tap >= 3);   // Garbage -> Despill
+  svg += link(468, yC, 520, yC, tap >= 4);   // Despill -> Merge
+  svg += link(616, yC, 642, yC, tap >= 5);   // Merge -> Salida
+  svg += link(176, 68, 176, 46, state.plate.has && state.plate.use && tap >= 1);   // Clean plate -> Key
+  svg += link(568, 68, 568, 46, state.hasBg && tap >= 4);                          // Fondo -> Merge
+  svg += `<text class="nm-badge ${state.hasBg && state.wrap > 0 && tap >= 4 ? '' : 'off'}" x="576" y="60">${t('nm.lw')}</text>`;
   for (const n of nodes) {
     svg += `<g class="nm-node ${n.cls} ${n.off ? 'off' : ''}" data-act="${n.act}" transform="translate(${n.x},${n.y})">` +
       `<rect width="${NW}" height="${NH}" rx="8"/>` +
