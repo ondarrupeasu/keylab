@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KeyLab — Laboratorio de croma</title>
+  <meta name="description" content="Laboratorio interactivo para entender el chroma key. CIFP Tartanga LHII." />
+  <meta name="theme-color" content="#14161a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">KeyLab</span>
+      <span class="tag" data-i18n="subtitle">Laboratorio de croma</span>
+    </div>
+    <div class="langs" role="group" aria-label="Idioma">
+      <button class="lang" data-lang="es">ES</button>
+      <button class="lang" data-lang="eu">EU</button>
+      <button class="lang" data-lang="en">EN</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Panel de controles -->
+    <aside class="panel">
+      <section class="group">
+        <h2 data-i18n="src.title">Imagen</h2>
+        <div class="row">
+          <button id="btnLoad" class="btn primary" data-i18n="src.load">Cargar imagen…</button>
+          <button id="btnDemo" class="btn" data-i18n="src.demo">Demo</button>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" hidden />
+        <p class="hint" data-i18n="src.hint">Arrastra una imagen aquí. Todo es local: nada se sube a internet.</p>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="key.title">Chroma key</h2>
+        <div class="row">
+          <button id="btnPick" class="btn" data-i18n="key.pick">Cuentagotas</button>
+          <span class="swatch-wrap">
+            <span id="keySwatch" class="swatch" title="Color clave"></span>
+            <input id="keyColor" type="color" value="#00b140" />
+          </span>
+        </div>
+        <label class="slider">
+          <span><span data-i18n="key.tolerance">Tolerancia</span> <output id="tolOut">0.12</output></span>
+          <input id="tolerance" type="range" min="0" max="0.35" step="0.005" value="0.12" />
+        </label>
+        <label class="slider">
+          <span><span data-i18n="key.softness">Suavizado</span> <output id="softOut">0.10</output></span>
+          <input id="softness" type="range" min="0.001" max="0.35" step="0.005" value="0.10" />
+        </label>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="view.title">Vista</h2>
+        <div class="views">
+          <button class="view active" data-mode="0" data-i18n="view.composite">Compuesto</button>
+          <button class="view" data-mode="1" data-i18n="view.original">Original</button>
+          <button class="view" data-mode="2" data-i18n="view.alpha">Alpha</button>
+          <button class="view" data-mode="3" data-i18n="view.rgba">Canales RGBA</button>
+        </div>
+        <p class="hint" id="viewHint" data-i18n="view.hint.composite">Croma aplicado sobre cuadros: lo transparente deja ver el ajedrezado.</p>
+      </section>
+    </aside>
+
+    <!-- Escenario -->
+    <section class="stage" id="stage">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gl"></canvas>
+        <div class="grid-labels" id="gridLabels" hidden>
+          <span class="gl-label" style="left:0;top:0">R</span>
+          <span class="gl-label" style="right:0;top:0">G</span>
+          <span class="gl-label" style="left:0;bottom:0">B</span>
+          <span class="gl-label" style="right:0;bottom:0">A</span>
+        </div>
+        <div class="drop-hint" id="dropHint">
+          <p data-i18n="drop.big">Carga una imagen para empezar</p>
+          <p class="small" data-i18n="drop.small">o pulsa «Demo» para ver un croma de ejemplo</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span data-i18n="foot.credits">CIFP Tartanga LHII · Realización A/V</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
