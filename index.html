@@ -53,6 +53,11 @@
           <span><span data-i18n="key.softness">Suavizado</span> <output id="softOut">0.10</output></span>
           <input id="softness" type="range" min="0.001" max="0.35" step="0.005" value="0.10" />
         </label>
+        <label class="slider">
+          <span><span data-i18n="key.despill">Despill</span> <output id="despillOut">0.00</output></span>
+          <input id="despill" type="range" min="0" max="1" step="0.02" value="0" />
+        </label>
+        <p class="hint" data-i18n="key.despill.hint">Despill: quita el tinte del croma que se cuela en los bordes del sujeto.</p>
       </section>
 
       <section class="group">
@@ -64,6 +69,18 @@
           <button class="view" data-mode="3" data-i18n="view.rgba">Canales RGBA</button>
         </div>
         <p class="hint" id="viewHint" data-i18n="view.hint.composite">Croma aplicado sobre cuadros: lo transparente deja ver el ajedrezado.</p>
+      </section>
+
+      <section class="group">
+        <h2 data-i18n="scope.title">Scopes</h2>
+        <div class="views">
+          <button class="scope active" data-scope="off" data-i18n="scope.off">Ninguno</button>
+          <button class="scope" data-scope="histogram" data-i18n="scope.hist">Histograma</button>
+          <button class="scope" data-scope="waveform" data-i18n="scope.wave">Waveform</button>
+          <button class="scope" data-scope="parade" data-i18n="scope.parade">Parade</button>
+          <button class="scope" data-scope="vectorscope" data-i18n="scope.vector">Vectorscopio</button>
+        </div>
+        <p class="hint" id="scopeHint" data-i18n="scope.hint">En el vectorscopio, el aro coral marca dónde cae el color de croma.</p>
       </section>
     </aside>
 
@@ -87,9 +104,25 @@
         <button id="framePrev" class="tbtn" title="Fotograma anterior">◄</button>
         <input id="timeline" type="range" min="0" max="0" step="0.001" value="0" />
         <button id="frameNext" class="tbtn" title="Fotograma siguiente">►</button>
+        <select id="fpsSel" class="fpssel" title="Fotogramas por segundo">
+          <option value="auto">Auto</option>
+          <option value="23.976">23.976</option>
+          <option value="24">24</option>
+          <option value="25">25</option>
+          <option value="29.97">29.97</option>
+          <option value="30">30</option>
+          <option value="48">48</option>
+          <option value="50">50</option>
+          <option value="59.94">59.94</option>
+          <option value="60">60</option>
+        </select>
         <span class="tcode" id="timecode">0:00.00</span>
       </div>
       <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
+
+      <div class="scopes" id="scopes" hidden>
+        <canvas id="scopeCanvas"></canvas>
+      </div>
     </section>
   </main>
 
@@ -97,6 +130,7 @@
     <span data-i18n="foot.credits">CIFP Tartanga LHII · Realización A/V</span>
   </footer>
 
+  <script src="scopes.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

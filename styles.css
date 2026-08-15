@@ -150,7 +150,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* views */
 .views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.view {
+.view, .scope {
   background: var(--bg-2);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -160,8 +160,9 @@ input[type="range"]::-moz-range-thumb {
   font-size: 12px;
   font-weight: 600;
 }
-.view:hover { color: var(--text); border-color: #3a4150; }
-.view.active { color: var(--coral-2); background: var(--coral-dim); border-color: var(--coral); }
+.view:hover, .scope:hover { color: var(--text); border-color: #3a4150; }
+.view.active, .scope.active { color: var(--coral-2); background: var(--coral-dim); border-color: var(--coral); }
+.scope[data-scope="vectorscope"] { grid-column: span 2; }
 
 /* ---- Stage ---- */
 .stage {
@@ -204,8 +205,29 @@ input[type="range"]::-moz-range-thumb {
   min-width: 62px;
   text-align: right;
 }
+.fpssel {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+.fpssel:hover { border-color: var(--coral); }
 .frozen-hint { text-align: center; margin: 0; }
 .frozen-hint[hidden] { display: none; }
+
+/* scopes */
+.scopes { width: 100%; max-width: 720px; }
+.scopes[hidden] { display: none; }
+#scopeCanvas {
+  width: 100%; height: auto;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0c0e12;
+}
 .canvas-wrap {
   position: relative;
   max-width: 100%;

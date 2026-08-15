@@ -15,6 +15,15 @@ const I18N = {
     'src.hint': 'Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.',
     'media.frozen': 'Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.',
     'media.badcodec': 'No se puede decodificar este vídeo en el navegador (¿ProRes o HEVC?). Prueba con MP4 (H.264) o WebM.',
+    'key.despill': 'Despill',
+    'key.despill.hint': 'Despill: quita el tinte del croma que se cuela en los bordes del sujeto.',
+    'scope.title': 'Scopes',
+    'scope.off': 'Ninguno',
+    'scope.hist': 'Histograma',
+    'scope.wave': 'Waveform',
+    'scope.parade': 'Parade',
+    'scope.vector': 'Vectorscopio',
+    'scope.hint': 'En el vectorscopio, el aro coral marca dónde cae el color de croma.',
     'key.title': 'Chroma key',
     'key.pick': 'Cuentagotas',
     'key.tolerance': 'Tolerancia',
@@ -41,6 +50,15 @@ const I18N = {
     'src.hint': 'Arrastatu irudi edo bideo bat hona. Dena lokala da: ezer ez da internetera igotzen.',
     'media.frozen': 'Fotograma izoztuaren modua: mugitu denbora-lerroa eta aukeratu markoa. Ez da jarraian erreproduzitzen.',
     'media.badcodec': 'Bideo hau ezin da nabigatzailean deskodetu (ProRes edo HEVC?). Saiatu MP4 (H.264) edo WebM formatuarekin.',
+    'key.despill': 'Despill',
+    'key.despill.hint': 'Despill: subjektuaren ertzetan sartzen den kroma-tindua kentzen du.',
+    'scope.title': 'Scope-ak',
+    'scope.off': 'Bat ere ez',
+    'scope.hist': 'Histograma',
+    'scope.wave': 'Waveform',
+    'scope.parade': 'Parade',
+    'scope.vector': 'Bektorroskopioa',
+    'scope.hint': 'Bektorroskopioan, koral eraztunak kroma-kolorea non erortzen den markatzen du.',
     'key.title': 'Chroma key',
     'key.pick': 'Tanta-kontagailua',
     'key.tolerance': 'Tolerantzia',
@@ -67,6 +85,15 @@ const I18N = {
     'src.hint': 'Drop an image or video here. Everything is local: nothing is uploaded.',
     'media.frozen': 'Frozen-frame mode: move the timeline and pick the frame. It does not play back.',
     'media.badcodec': 'This video can’t be decoded in the browser (ProRes or HEVC?). Try MP4 (H.264) or WebM.',
+    'key.despill': 'Despill',
+    'key.despill.hint': 'Despill: removes the chroma tint that spills onto the subject’s edges.',
+    'scope.title': 'Scopes',
+    'scope.off': 'None',
+    'scope.hist': 'Histogram',
+    'scope.wave': 'Waveform',
+    'scope.parade': 'Parade',
+    'scope.vector': 'Vectorscope',
+    'scope.hint': 'On the vectorscope, the coral ring marks where the chroma colour falls.',
     'key.title': 'Chroma key',
     'key.pick': 'Eyedropper',
     'key.tolerance': 'Tolerance',
@@ -132,6 +159,8 @@ uniform float uTol;        // tolerancia (distancia croma)
 uniform float uSoft;       // suavizado
 uniform int   uMode;       // 0 compuesto, 1 original, 2 alpha, 3 rgba
 uniform vec2  uRes;        // resolución del canvas (px)
+uniform float uDespill;    // cantidad de despill 0..1
+uniform int   uKeyChan;    // canal dominante del croma: 0=R 1=G 2=B
 
 // crominancia YCbCr (Rec.601)
 vec2 chroma(vec3 c) {
@@ -144,6 +173,22 @@ float keyAlpha(vec3 col) {
   float d = distance(chroma(col), chroma(uKey));
   // dentro de la tolerancia => transparente (0); fuera => opaco (1)
   return smoothstep(uTol, uTol + uSoft, d);
+}
+
+// despill: si el canal del croma supera a los otros, lo empuja hacia ellos
+vec3 despill(vec3 c) {
+  if (uDespill <= 0.0) return c;
+  if (uKeyChan == 1) {          // verde
+    float o = max(c.r, c.b);
+    if (c.g > o) c.g = mix(c.g, o, uDespill);
+  } else if (uKeyChan == 2) {   // azul
+    float o = max(c.r, c.g);
+    if (c.b > o) c.b = mix(c.b, o, uDespill);
+  } else {                      // rojo
+    float o = max(c.g, c.b);
+    if (c.r > o) c.r = mix(c.r, o, uDespill);
+  }
+  return c;
 }
 
 vec3 checker(vec2 px) {
@@ -188,9 +233,10 @@ void main() {
     return;
   }
 
-  // compuesto sobre ajedrezado
+  // compuesto sobre ajedrezado (con despill en el primer plano)
   vec3 bg = checker(vUv * uRes);
-  outColor = vec4(mix(bg, src.rgb, a), 1.0);
+  vec3 fg = despill(src.rgb);
+  outColor = vec4(mix(bg, fg, a), 1.0);
 }`;
 
 function compile(type, source) {
@@ -232,6 +278,8 @@ const U = {
   soft: gl.getUniformLocation(prog, 'uSoft'),
   mode: gl.getUniformLocation(prog, 'uMode'),
   res:  gl.getUniformLocation(prog, 'uRes'),
+  despill: gl.getUniformLocation(prog, 'uDespill'),
+  keyChan: gl.getUniformLocation(prog, 'uKeyChan'),
 };
 
 const tex = gl.createTexture();
@@ -251,7 +299,10 @@ const state = {
   key: [0.0, 0.694, 0.251],   // #00b140 sRGB
   tol: 0.12,
   soft: 0.10,
+  despill: 0.0,
+  keyChan: 1,                 // verde por defecto
   mode: 0,
+  scope: 'off',
   picking: false,
 };
 // canvas 2D auxiliar para muestrear color exacto (cuentagotas)
@@ -265,9 +316,25 @@ function render() {
   gl.uniform1f(U.soft, state.soft);
   gl.uniform1i(U.mode, state.mode);
   gl.uniform2f(U.res, canvas.width, canvas.height);
+  gl.uniform1f(U.despill, state.despill);
+  gl.uniform1i(U.keyChan, state.keyChan);
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
   if (state.hasImage) gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+// canal dominante del croma (para el despill)
+function updateKeyChan() {
+  const k = state.key;
+  state.keyChan = (k[1] >= k[0] && k[1] >= k[2]) ? 1 : (k[2] >= k[0] ? 2 : 0);
+}
+
+// redibuja el scope activo sobre el fotograma actual
+function updateScopes() {
+  const dock = $('scopes');
+  if (state.scope === 'off' || !state.hasImage) { dock.hidden = true; return; }
+  dock.hidden = false;
+  window.KeyLabScopes.draw(state.scope, srcCanvas, $('scopeCanvas'), state.key);
 }
 
 function setImageSource(source, w, h) {
@@ -290,6 +357,7 @@ function setImageSource(source, w, h) {
   state.hasImage = true;
   document.getElementById('dropHint').hidden = true;
   render();
+  updateScopes();
 }
 
 function loadImageFile(file) {
@@ -304,8 +372,19 @@ const video = document.createElement('video');
 video.muted = true;
 video.playsInline = true;
 video.preload = 'auto';
+// en el DOM (oculto) para que el compositor presente fotogramas -> requestVideoFrameCallback
+video.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px';
+document.body.appendChild(video);
 let videoURL = null;
-const media = { isVideo: false, fps: 25, seeking: false, pending: null };
+const media = { isVideo: false, fps: 25, fpsAuto: true, fpsDetected: null, seeking: false, pending: null };
+
+// aplica los fps efectivos (auto = detectado ó 25) al paso del timeline y al selector
+function applyFps() {
+  media.fps = media.fpsAuto ? (media.fpsDetected || 25) : media.fps;
+  $('timeline').step = String(1 / media.fps);
+  const auto = document.querySelector('#fpsSel option[value="auto"]');
+  auto.textContent = media.fpsDetected ? 'Auto (' + fpsLabel(media.fpsDetected) + ')' : 'Auto';
+}
 
 function teardownVideo() {
   media.isVideo = false;
@@ -347,21 +426,63 @@ video.addEventListener('error', () => {
   dh.innerHTML = '<p>' + t('media.badcodec') + '</p>';
 });
 
+// ajusta a fps estándar si está cerca; si no, deja el valor medido
+function snapFps(f) {
+  const common = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
+  let best = f, bestd = Infinity;
+  for (const c of common) { const dd = Math.abs(c - f); if (dd < bestd) { bestd = dd; best = c; } }
+  return bestd <= 0.6 ? best : Math.round(f * 1000) / 1000;
+}
+
+// detecta fps reproduciendo unos frames (muted) y midiendo con requestVideoFrameCallback
+function probeFps() {
+  return new Promise((resolve) => {
+    if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype)) { resolve(null); return; }
+    const samples = [];
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      video.pause();
+      let fps = null;
+      if (samples.length >= 2) {
+        const a = samples[0], b = samples[samples.length - 1];
+        const df = b.f - a.f, dt = b.t - a.t;
+        if (dt > 0 && df > 0) fps = df / dt;
+      }
+      resolve(fps ? snapFps(fps) : null);
+    };
+    const onFrame = (now, meta) => {
+      samples.push({ t: meta.mediaTime, f: meta.presentedFrames });
+      if (samples.length >= 6) { finish(); return; }
+      video.requestVideoFrameCallback(onFrame);
+    };
+    video.requestVideoFrameCallback(onFrame);
+    video.play().catch(() => finish());
+    setTimeout(finish, 2500);   // seguridad
+  });
+}
+
+function fpsLabel(f) { return (f % 1 ? f.toFixed(2) : String(f)) + ' fps'; }
+
 function loadVideoFile(file) {
   teardownVideo();
   media.isVideo = true;
   videoURL = URL.createObjectURL(file);
   video.src = videoURL;
-  video.addEventListener('loadeddata', () => {
+  video.addEventListener('loadeddata', async () => {
     if (!video.videoWidth) return;   // el handler de 'error' avisa
     $('timeline').min = '0';
     $('timeline').max = String(video.duration || 0);
-    $('timeline').step = String(1 / media.fps);
     $('timeline').value = '0';
     $('transport').hidden = false;
     $('frozenHint').hidden = false;
     $('timecode').textContent = fmtTime(0);
-    drawVideoFrame();   // primer fotograma
+    media.fpsDetected = null;
+    applyFps();                     // paso inicial (auto=25 hasta detectar)
+    drawVideoFrame();               // primer fotograma ya visible
+    media.fpsDetected = await probeFps();   // intentar detectar fps reales
+    applyFps();                     // aplica lo detectado si estamos en Auto
+    seekTo(0);                      // volver al primer fotograma tras el sondeo
   }, { once: true });
   video.load();
 }
@@ -430,7 +551,9 @@ function pickAt(ix, iy) {
   const hex = '#' + [p[0], p[1], p[2]].map((n) => n.toString(16).padStart(2, '0')).join('');
   document.getElementById('keySwatch').style.background = hex;
   document.getElementById('keyColor').value = hex;
+  updateKeyChan();
   render();
+  updateScopes();
 }
 
 /* ------------------------------------------------------------------ */
@@ -446,6 +569,11 @@ $('btnDemo').addEventListener('click', loadDemo);
 $('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
 $('framePrev').addEventListener('click', () => seekTo(video.currentTime - 1 / media.fps));
 $('frameNext').addEventListener('click', () => seekTo(video.currentTime + 1 / media.fps));
+$('fpsSel').addEventListener('change', (e) => {
+  if (e.target.value === 'auto') { media.fpsAuto = true; }
+  else { media.fpsAuto = false; media.fps = parseFloat(e.target.value); }
+  applyFps();
+});
 
 // drag & drop sobre el escenario
 const stage = $('stage');
@@ -483,10 +611,17 @@ $('keyColor').addEventListener('input', (e) => {
     parseInt(hex.slice(5, 7), 16) / 255,
   ];
   $('keySwatch').style.background = hex;
+  updateKeyChan();
   render();
+  updateScopes();
 });
 
 // sliders
+$('despill').addEventListener('input', (e) => {
+  state.despill = parseFloat(e.target.value);
+  $('despillOut').textContent = state.despill.toFixed(2);
+  render();
+});
 $('tolerance').addEventListener('input', (e) => {
   state.tol = parseFloat(e.target.value);
   $('tolOut').textContent = state.tol.toFixed(3);
@@ -514,6 +649,16 @@ function updateViewHint() {
   $('viewHint').textContent = t(keys[state.mode]);
 }
 
+// scopes
+document.querySelectorAll('.scope').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.scope').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    state.scope = b.dataset.scope;
+    updateScopes();
+  });
+});
+
 // idiomas
 document.querySelectorAll('.lang').forEach((b) => {
   b.addEventListener('click', () => {
@@ -527,6 +672,7 @@ document.querySelectorAll('.lang').forEach((b) => {
 /*  Arranque                                                           */
 /* ------------------------------------------------------------------ */
 applyLang();
+updateKeyChan();
 render();
 
 // registro del service worker (offline)
