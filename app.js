@@ -11,18 +11,10 @@ const I18N = {
     subtitle: 'Laboratorio de croma',
     reset: '↺ Reiniciar',
     'ex.title': 'Ejemplos de croma',
-    'ex.good': 'Bueno',
-    'ex.uneven': 'Iluminación desigual',
-    'ex.shadow': 'Sombra en el fondo',
-    'ex.noise': 'Poca luz (ruido)',
-    'ex.spill': 'Mucho spill',
+    'ex.green': 'Croma verde',
     'ex.blue': 'Croma azul',
-    'ex.hint.good': 'Croma bien iluminado y uniforme: el key sale limpio con poco esfuerzo.',
-    'ex.hint.uneven': 'Un lado del fondo está mucho más oscuro: verás que una sola tolerancia no vale para todo el fondo. (Aquí ayudará el clean plate).',
-    'ex.hint.shadow': 'El sujeto proyecta sombra sobre el fondo: el borde se ensucia y cuesta separarlo.',
-    'ex.hint.noise': 'Fondo con poca luz y ruidoso (sobre todo en azul): el alpha sale con "nieve" en los bordes.',
-    'ex.hint.spill': 'Mucho verde rebotado en el sujeto: mira cómo el despill limpia el tinte de los bordes.',
-    'ex.hint.blue': 'La misma imagen sobre croma azul: coge el azul con el cuentagotas. El key funciona igual; ahora el canal ruidoso es otro.',
+    'ex.hint.green': 'Modelo real sobre croma verde. Coge el verde con el cuentagotas y pasa a Compuesto. Fíjate en el pelo: el reto del alpha.',
+    'ex.hint.blue': 'Otro modelo sobre croma azul. Coge el azul con el cuentagotas. El key funciona igual; ahora el canal ruidoso es otro.',
     'src.title': 'Fuente',
     'src.load': 'Cargar imagen o vídeo…',
     'src.demo': 'Demo',
@@ -77,18 +69,10 @@ const I18N = {
     subtitle: 'Kroma laborategia',
     reset: '↺ Berrabiarazi',
     'ex.title': 'Kroma adibideak',
-    'ex.good': 'Ona',
-    'ex.uneven': 'Argiztapen desorekatua',
-    'ex.shadow': 'Itzala atzealdean',
-    'ex.noise': 'Argi gutxi (zarata)',
-    'ex.spill': 'Spill handia',
+    'ex.green': 'Kroma berdea',
     'ex.blue': 'Kroma urdina',
-    'ex.hint.good': 'Ondo argiztatutako kroma uniformea: key-a garbi ateratzen da ahalegin gutxirekin.',
-    'ex.hint.uneven': 'Atzealdearen alde bat askoz ilunagoa da: tolerantzia bakarrak ez du atzealde osoa balio. (Hemen clean plate-ak lagunduko du).',
-    'ex.hint.shadow': 'Subjektuak itzala egiten du atzealdean: ertza zikintzen da eta zaila da bereiztea.',
-    'ex.hint.noise': 'Atzealde ilun eta zaratatsua (batez ere urdinean): alpha "elurtsu" ateratzen da ertzetan.',
-    'ex.hint.spill': 'Berde asko islatuta subjektuan: ikusi nola despill-ak ertzetako tindua garbitzen duen.',
-    'ex.hint.blue': 'Irudi bera kroma urdinean: hartu urdina tanta-kontagailuarekin. Key-ak berdin funtzionatzen du; kanal zaratatsua orain bestea da.',
+    'ex.hint.green': 'Modelo erreala kroma berdean. Hartu berdea tanta-kontagailuarekin eta pasatu Konposatura. Begiratu ileari: alpha-ren erronka.',
+    'ex.hint.blue': 'Beste modelo bat kroma urdinean. Hartu urdina tanta-kontagailuarekin. Key-ak berdin funtzionatzen du; orain kanal zaratatsua bestea da.',
     'src.title': 'Iturria',
     'src.load': 'Kargatu irudia edo bideoa…',
     'src.demo': 'Demo',
@@ -143,18 +127,10 @@ const I18N = {
     subtitle: 'Chroma key lab',
     reset: '↺ Reset',
     'ex.title': 'Chroma examples',
-    'ex.good': 'Good',
-    'ex.uneven': 'Uneven lighting',
-    'ex.shadow': 'Shadow on the screen',
-    'ex.noise': 'Low light (noise)',
-    'ex.spill': 'Heavy spill',
+    'ex.green': 'Green screen',
     'ex.blue': 'Blue screen',
-    'ex.hint.good': 'Well-lit, even screen: the key comes out clean with little effort.',
-    'ex.hint.uneven': 'One side of the screen is much darker: a single tolerance won’t cover the whole screen. (Clean plate helps here).',
-    'ex.hint.shadow': 'The subject casts a shadow on the screen: the edge gets dirty and hard to separate.',
-    'ex.hint.noise': 'Low-light, noisy screen (mostly in blue): the alpha comes out with edge “snow”.',
-    'ex.hint.spill': 'Lots of bounced green on the subject: watch despill clean the edge tint.',
-    'ex.hint.blue': 'Same image on a blue screen: pick the blue with the eyedropper. The key works the same; the noisy channel is now a different one.',
+    'ex.hint.green': 'A real model on a green screen. Pick the green with the eyedropper and switch to Composite. Watch the hair: the alpha challenge.',
+    'ex.hint.blue': 'Another model on a blue screen. Pick the blue with the eyedropper. The key works the same; the noisy channel is now a different one.',
     'src.title': 'Source',
     'src.load': 'Load image or video…',
     'src.demo': 'Demo',
@@ -940,16 +916,17 @@ function buildScene(opts = {}) {
   x.putImageData(id, 0, 0);
   return c;
 }
-/* Demo basada en una foto REAL de croma (modelo sobre verde, CC BY 2.0,
-   PictureYouth — ver README). Los ejemplos aplican defectos sobre esa foto.
-   Si la foto no carga, se usa el maniquí procedimental como fallback. */
-let demoImg = null, demoState = 'none';   // 'none' | 'ok' | 'error'
-function ensureDemoImg(cb) {
-  if (demoState === 'ok' || demoState === 'error') { cb(); return; }
-  demoImg = new Image();
-  demoImg.onload = () => { demoState = 'ok'; cb(); };
-  demoImg.onerror = () => { demoState = 'error'; cb(); };
-  demoImg.src = 'demo.jpg';
+/* Demos basadas en fotos REALES de croma (ver créditos en README):
+   - demo.jpg: modelo sobre croma verde (CC BY 2.0, PictureYouth).
+   - demo-blue.jpg: modelo sobre croma; el fondo se recolorea a azul en la app.
+   Si una foto no carga, se usa el maniquí procedimental como fallback. */
+const photoCache = {};
+function loadPhoto(src, cb) {
+  if (photoCache[src]) { cb(photoCache[src]); return; }
+  const img = new Image();
+  img.onload = () => { photoCache[src] = img; cb(img); };
+  img.onerror = () => cb(null);
+  img.src = src;
 }
 
 // aplica defectos de croma malo sobre la foto real (opts como en buildScene)
@@ -976,8 +953,9 @@ function applyDefects(x, w, h, cfg) {
     const id = x.getImageData(0, 0, w, h), d = id.data;
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i + 1], b = d[i + 2];
-      if (toBlue && g > 85 && g > r * 1.2 && g > b * 1.15) {   // fondo verde -> azul
-        d[i] = r * 0.35; d[i + 1] = g * 0.4; d[i + 2] = Math.min(255, 110 + g * 0.55);
+      if (toBlue && (g - Math.max(r, b)) > 6) {   // "verdor" -> fondo verde (claro u oscuro) a azul
+        const lum = 0.5 * g + 0.25 * r + 0.25 * b;
+        d[i] = lum * 0.30; d[i + 1] = lum * 0.42; d[i + 2] = Math.min(255, 70 + lum * 0.75);
       }
       if (n > 4) {
         d[i]     += (Math.random() - 0.5) * (n * 0.4);
@@ -989,31 +967,32 @@ function applyDefects(x, w, h, cfg) {
   }
 }
 
-function buildDemoCanvas(opts) {
-  if (demoState !== 'ok' || !demoImg.naturalWidth) return buildScene(opts);  // fallback maniquí
-  const iw = demoImg.naturalWidth, ih = demoImg.naturalHeight;
-  const c = document.createElement('canvas'); c.width = iw; c.height = ih;
-  const x = c.getContext('2d');
-  x.drawImage(demoImg, 0, 0);
-  applyDefects(x, iw, ih, Object.assign({ noise: 0, spill: 0, screen: 'green' }, opts));
-  return c;
-}
-
-function loadScene(opts, hintKey) {
+// cfg = { src, opts?, hint? }
+function loadScene(cfg) {
   teardownVideo();
   if (state.webcam) stopWebcam();
-  ensureDemoImg(() => {
-    const c = buildDemoCanvas(opts);
+  const opts = cfg.opts || {};
+  loadPhoto(cfg.src, (img) => {
+    let c;
+    if (img && img.naturalWidth) {
+      c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      applyDefects(x, c.width, c.height, Object.assign({ noise: 0, spill: 0, screen: 'green' }, opts));
+    } else {
+      c = buildScene(opts);   // fallback maniquí procedimental
+    }
     setImageSource(c, c.width, c.height);
-    demoHintKey = hintKey || null;
+    demoHintKey = cfg.hint || null;
     updateExampleHint();
-    // color clave del croma (esquina superior derecha = fondo), pero SIN aplicar:
+    // color clave del croma (esquina superior derecha = fondo), SIN aplicar:
     // arranca en Original para que lo hagan paso a paso.
     pickAt(Math.round(c.width * 0.94), Math.round(c.height * 0.05));
     setView(1);
   });
 }
-function loadDemo() { loadScene({}, null); }
+function loadDemo() { loadScene({ src: 'demo.jpg' }); }
 
 /* ------------------------------------------------------------------ */
 /*  Cuentagotas                                                        */
@@ -1044,21 +1023,16 @@ $('btnDemo').addEventListener('click', loadDemo);
 $('btnWebcam').addEventListener('click', () => { state.webcam ? stopWebcam() : startWebcam(); });
 $('btnFreeze').addEventListener('click', toggleFreeze);
 
-// ejemplos de croma (bueno / malos)
+// ejemplos de croma: chica sobre verde / chico sobre azul
 const EXAMPLES = {
-  good:   [{}, 'ex.hint.good'],
-  uneven: [{ lighting: 'uneven', noise: 12 }, 'ex.hint.uneven'],
-  shadow: [{ shadow: true }, 'ex.hint.shadow'],
-  noise:  [{ noise: 46, spill: 0.35 }, 'ex.hint.noise'],
-  spill:  [{ spill: 1.0 }, 'ex.hint.spill'],
-  blue:   [{ screen: 'blue' }, 'ex.hint.blue'],
+  green: { src: 'demo.jpg', hint: 'ex.hint.green' },
+  blue:  { src: 'demo-blue.jpg', opts: { screen: 'blue' }, hint: 'ex.hint.blue' },
 };
 document.querySelectorAll('.ex').forEach((b) => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
-    const [opts, hint] = EXAMPLES[b.dataset.ex];
-    loadScene(opts, hint);
+    loadScene(EXAMPLES[b.dataset.ex]);
   });
 });
 

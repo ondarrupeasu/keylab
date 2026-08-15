@@ -1,6 +1,6 @@
 /* KeyLab service worker — cache básica para uso offline.
    Sube CACHE cuando cambien los assets para forzar actualización. */
-const CACHE = 'keylab-v3';
+const CACHE = 'keylab-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   './manifest.webmanifest',
   './icon.svg',
   './demo.jpg',
+  './demo-blue.jpg',
 ];
 
 self.addEventListener('install', (e) => {

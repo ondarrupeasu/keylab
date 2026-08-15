@@ -36,9 +36,12 @@ y abre http://localhost:8000
 
 ## Créditos
 
-- Imagen de demo (`demo.jpg`): *"Girl in front of a green background"* por **PictureYouth**,
+- Imagen de demo verde (`demo.jpg`): *"Girl in front of a green background"* por **PictureYouth**,
   [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — vía
   [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Girl_in_front_of_a_green_background.jpg).
+- Imagen de demo azul (`demo-blue.jpg`): retrato sobre croma de **Pexels**
+  ([Pexels License](https://www.pexels.com/license/), uso libre) —
+  [foto 36904563](https://www.pexels.com/photo/36904563/). El fondo se recolorea a azul en la app.
 
 ## Licencia
 
