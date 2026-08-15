@@ -55,7 +55,8 @@
     for (let i = 1; i < 4; i++) { const x = (i / 4) * w; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     ctx.beginPath();
     ctx.moveTo(0, h);
-    for (let i = 0; i < 256; i++) { const x = (i / 255) * w; const y = h - (L[i] / max) * (h - 4); ctx.lineTo(x, y); }
+    // escala raíz: el pico dominante (croma) no aplasta highlights/sombras
+    for (let i = 0; i < 256; i++) { const x = (i / 255) * w; const y = h - Math.sqrt(L[i] / max) * (h - 4); ctx.lineTo(x, y); }
     ctx.lineTo(w, h); ctx.closePath();
     ctx.fillStyle = 'rgba(232,236,241,.85)'; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.stroke();

@@ -231,10 +231,10 @@ input[type="range"]::-moz-range-thumb {
   flex: 0 0 auto; align-items: flex-start;
 }
 .dock[hidden] { display: none; }
-.dock-left { flex: 1 1 42%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.dock-left { flex: 1 1 36%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 /* dock-right con altura fija: el hueco del scope está SIEMPRE reservado,
    así activar/desactivar un scope no readapta ni encoge el vídeo */
-.dock-right { flex: 1 1 58%; min-width: 0; display: flex; flex-direction: column; gap: 8px; height: 230px; }
+.dock-right { flex: 1 1 64%; min-width: 0; display: flex; flex-direction: column; gap: 8px; height: 230px; }
 .dock-title {
   align-self: flex-start;
   font-size: 11px; text-transform: uppercase; letter-spacing: .8px;

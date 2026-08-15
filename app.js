@@ -630,7 +630,7 @@ function updateScopes() {
   if (box.dataset.set !== setKey) {          // reconstruye el DOM solo si cambia el conjunto
     box.dataset.set = setKey;
     box.innerHTML = '';
-    box.style.gridTemplateColumns = 'repeat(' + Math.min(active.length, 2) + ', minmax(0,1fr))';
+    box.style.gridTemplateColumns = 'repeat(' + active.length + ', minmax(0,1fr))';   // todos en una fila
     scopeCanvases = {};
     for (const t of active) {
       const cv = document.createElement('canvas');
