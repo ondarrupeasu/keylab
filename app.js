@@ -9,6 +9,20 @@
 const I18N = {
   es: {
     subtitle: 'Laboratorio de croma',
+    reset: '↺ Reiniciar',
+    'ex.title': 'Ejemplos de croma',
+    'ex.good': 'Bueno',
+    'ex.uneven': 'Iluminación desigual',
+    'ex.shadow': 'Sombra en el fondo',
+    'ex.noise': 'Poca luz (ruido)',
+    'ex.spill': 'Mucho spill',
+    'ex.blue': 'Croma azul',
+    'ex.hint.good': 'Croma bien iluminado y uniforme: el key sale limpio con poco esfuerzo.',
+    'ex.hint.uneven': 'Un lado del fondo está mucho más oscuro: verás que una sola tolerancia no vale para todo el fondo. (Aquí ayudará el clean plate).',
+    'ex.hint.shadow': 'El sujeto proyecta sombra sobre el fondo: el borde se ensucia y cuesta separarlo.',
+    'ex.hint.noise': 'Fondo con poca luz y ruidoso (sobre todo en azul): el alpha sale con "nieve" en los bordes.',
+    'ex.hint.spill': 'Mucho verde rebotado en el sujeto: mira cómo el despill limpia el tinte de los bordes.',
+    'ex.hint.blue': 'El mismo maniquí sobre croma azul: coge el azul con el cuentagotas. El key funciona igual; el canal ruidoso ahora es otro.',
     'src.title': 'Fuente',
     'src.load': 'Cargar imagen o vídeo…',
     'src.demo': 'Demo',
@@ -61,6 +75,20 @@ const I18N = {
   },
   eu: {
     subtitle: 'Kroma laborategia',
+    reset: '↺ Berrabiarazi',
+    'ex.title': 'Kroma adibideak',
+    'ex.good': 'Ona',
+    'ex.uneven': 'Argiztapen desorekatua',
+    'ex.shadow': 'Itzala atzealdean',
+    'ex.noise': 'Argi gutxi (zarata)',
+    'ex.spill': 'Spill handia',
+    'ex.blue': 'Kroma urdina',
+    'ex.hint.good': 'Ondo argiztatutako kroma uniformea: key-a garbi ateratzen da ahalegin gutxirekin.',
+    'ex.hint.uneven': 'Atzealdearen alde bat askoz ilunagoa da: tolerantzia bakarrak ez du atzealde osoa balio. (Hemen clean plate-ak lagunduko du).',
+    'ex.hint.shadow': 'Subjektuak itzala egiten du atzealdean: ertza zikintzen da eta zaila da bereiztea.',
+    'ex.hint.noise': 'Atzealde ilun eta zaratatsua (batez ere urdinean): alpha "elurtsu" ateratzen da ertzetan.',
+    'ex.hint.spill': 'Berde asko islatuta subjektuan: ikusi nola despill-ak ertzetako tindua garbitzen duen.',
+    'ex.hint.blue': 'Maniki bera kroma urdinean: hartu urdina tanta-kontagailuarekin. Key-ak berdin funtzionatzen du; kanal zaratatsua orain bestea da.',
     'src.title': 'Iturria',
     'src.load': 'Kargatu irudia edo bideoa…',
     'src.demo': 'Demo',
@@ -113,6 +141,20 @@ const I18N = {
   },
   en: {
     subtitle: 'Chroma key lab',
+    reset: '↺ Reset',
+    'ex.title': 'Chroma examples',
+    'ex.good': 'Good',
+    'ex.uneven': 'Uneven lighting',
+    'ex.shadow': 'Shadow on the screen',
+    'ex.noise': 'Low light (noise)',
+    'ex.spill': 'Heavy spill',
+    'ex.blue': 'Blue screen',
+    'ex.hint.good': 'Well-lit, even screen: the key comes out clean with little effort.',
+    'ex.hint.uneven': 'One side of the screen is much darker: a single tolerance won’t cover the whole screen. (Clean plate helps here).',
+    'ex.hint.shadow': 'The subject casts a shadow on the screen: the edge gets dirty and hard to separate.',
+    'ex.hint.noise': 'Low-light, noisy screen (mostly in blue): the alpha comes out with edge “snow”.',
+    'ex.hint.spill': 'Lots of bounced green on the subject: watch despill clean the edge tint.',
+    'ex.hint.blue': 'Same mannequin on a blue screen: pick the blue with the eyedropper. The key works the same; the noisy channel is now a different one.',
     'src.title': 'Source',
     'src.load': 'Load image or video…',
     'src.demo': 'Demo',
@@ -166,6 +208,7 @@ const I18N = {
 };
 
 let lang = localStorage.getItem('keylab.lang') || 'es';
+let demoHintKey = null;   // clave i18n del ejemplo cargado (croma malo)
 
 function applyLang() {
   const dict = I18N[lang] || I18N.es;
@@ -178,8 +221,15 @@ function applyLang() {
     b.classList.toggle('active', b.dataset.lang === lang));
   updateViewHint();
   updatePickLabel();
+  updateExampleHint();
 }
 function t(key) { return (I18N[lang] || I18N.es)[key] || key; }
+function updateExampleHint() {
+  const el = document.getElementById('exampleHint');
+  if (!el) return;
+  el.textContent = demoHintKey ? t(demoHintKey) : '';
+  el.hidden = !demoHintKey;
+}
 
 /* ------------------------------------------------------------------ */
 /*  WebGL2                                                             */
@@ -727,160 +777,181 @@ function toggleFreeze() {
   if (state.webcamPaused) updateScopes();
 }
 
-/* --- imagen demo generada: croma verde realista (iluminación desigual,
-       pelo con mechones, algo de spill verde y ruido mayor en azul) --- */
-function buildDemo() {
+/* --- escena demo generada: maniquí articulado (estilo dummy) sobre croma.
+       opts controla defectos del fondo para los ejemplos de "croma malo":
+       { lighting:'good'|'uneven', shadow:bool, wrinkles:bool, noise:num, spill:num } --- */
+function buildScene(opts = {}) {
+  const cfg = Object.assign({ lighting: 'good', shadow: false, wrinkles: false, noise: 8, spill: 0.5, screen: 'green' }, opts);
   const w = 1280, h = 720;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const x = c.getContext('2d');
   const cx = w * 0.5;
+  const blue = cfg.screen === 'blue';   // true = pantalla azul
 
-  // --- fondo verde: base + hotspot de luz + viñeta (iluminación desigual) ---
-  x.fillStyle = '#0b9c3b';
+  // ================= FONDO =================
+  x.fillStyle = blue ? '#123a86' : '#0b9c3b';
   x.fillRect(0, 0, w, h);
-  let g = x.createRadialGradient(w * 0.40, h * 0.40, 50, w * 0.5, h * 0.55, w * 0.75);
-  g.addColorStop(0, 'rgba(70,220,120,0.85)');
-  g.addColorStop(1, 'rgba(0,120,55,0)');
-  x.fillStyle = g; x.fillRect(0, 0, w, h);
-  let vig = x.createRadialGradient(cx, h * 0.5, h * 0.32, cx, h * 0.55, h * 0.9);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,25,8,0.55)');
-  x.fillStyle = vig; x.fillRect(0, 0, w, h);
+  if (cfg.lighting === 'uneven') {
+    const hs = x.createRadialGradient(w * 0.74, h * 0.34, 40, w * 0.74, h * 0.4, w * 0.7);
+    hs.addColorStop(0, blue ? 'rgba(90,150,255,0.95)' : 'rgba(120,240,150,0.95)');
+    hs.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = hs; x.fillRect(0, 0, w, h);
+    const dk = x.createLinearGradient(0, 0, w, 0);
+    dk.addColorStop(0, blue ? 'rgba(0,8,30,0.8)' : 'rgba(0,25,10,0.8)');
+    dk.addColorStop(0.55, 'rgba(0,0,0,0)');
+    x.fillStyle = dk; x.fillRect(0, 0, w, h);
+  } else {
+    const g = x.createRadialGradient(w * 0.40, h * 0.40, 50, w * 0.5, h * 0.55, w * 0.75);
+    g.addColorStop(0, blue ? 'rgba(80,150,255,0.7)' : 'rgba(70,220,120,0.85)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    const vig = x.createRadialGradient(cx, h * 0.5, h * 0.32, cx, h * 0.55, h * 0.9);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, blue ? 'rgba(0,6,25,0.55)' : 'rgba(0,25,8,0.55)');
+    x.fillStyle = vig; x.fillRect(0, 0, w, h);
+  }
+  if (cfg.wrinkles) {           // pliegues de tela mal estirada
+    x.save(); x.filter = 'blur(6px)';
+    for (let i = 0; i < 8; i++) {
+      const yy = 80 + i * 78 + (Math.random() - 0.5) * 30;
+      x.strokeStyle = i % 2 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.16)';
+      x.lineWidth = 10 + Math.random() * 10;
+      x.beginPath(); x.moveTo(-20, yy);
+      x.bezierCurveTo(w * 0.33, yy - 40, w * 0.66, yy + 40, w + 20, yy - 10);
+      x.stroke();
+    }
+    x.restore();
+  }
 
-  // --- silueta del sujeto (cabeza + cuello + hombros) como Path2D reutilizable ---
-  const headCy = h * 0.42, headRx = 105, headRy = 132;
+  // geometría del maniquí
+  const headCy = 208, headRx = 84, headRy = 100;
+  const neckY = 322, shY = 402, shX = 166, shR = 60;
+
+  // silueta (para spill / composición)
   const body = new Path2D();
-  body.moveTo(cx - 300, h);
-  body.quadraticCurveTo(cx - 250, h * 0.66, cx - 95, h * 0.60);   // hombro izq
-  body.quadraticCurveTo(cx - 70, h * 0.55, cx - 60, h * 0.50);    // cuello izq
-  body.lineTo(cx + 60, h * 0.50);
-  body.quadraticCurveTo(cx + 70, h * 0.55, cx + 95, h * 0.60);    // cuello/hombro der
-  body.quadraticCurveTo(cx + 250, h * 0.66, cx + 300, h);
+  body.moveTo(cx - 210, h);
+  body.bezierCurveTo(cx - 232, 560, cx - 232, 468, cx - 202, 430);
+  body.bezierCurveTo(cx - 190, 402, cx - 120, 388, cx - 66, 368);
+  body.bezierCurveTo(cx - 54, 356, cx - 48, 342, cx - 46, neckY);
+  body.bezierCurveTo(cx - 92, 298, cx - headRx - 6, headCy, cx, headCy - headRy - 4);
+  body.bezierCurveTo(cx + headRx + 6, headCy, cx + 92, 298, cx + 46, neckY);
+  body.bezierCurveTo(cx + 48, 342, cx + 54, 356, cx + 66, 368);
+  body.bezierCurveTo(cx + 120, 388, cx + 190, 402, cx + 202, 430);
+  body.bezierCurveTo(cx + 232, 468, cx + 232, 560, cx + 210, h);
   body.closePath();
 
-  // sombra de contacto suave sobre el "suelo"
-  x.save();
-  x.filter = 'blur(18px)';
-  x.fillStyle = 'rgba(0,40,15,0.35)';
-  x.beginPath(); x.ellipse(cx, h * 0.98, 260, 40, 0, 0, Math.PI * 2); x.fill();
+  // sombra proyectada en el fondo (defecto)
+  if (cfg.shadow) {
+    x.save(); x.filter = 'blur(26px)';
+    x.fillStyle = blue ? 'rgba(0,6,24,0.5)' : 'rgba(0,35,14,0.5)';
+    x.translate(150, 24); x.fill(body);
+    x.restore();
+  }
+  // sombra de contacto
+  x.save(); x.filter = 'blur(20px)';
+  x.fillStyle = blue ? 'rgba(0,6,24,0.4)' : 'rgba(0,40,15,0.4)';
+  x.beginPath(); x.ellipse(cx, h * 0.99, 250, 38, 0, 0, Math.PI * 2); x.fill();
   x.restore();
 
-  // camiseta (con sombreado)
-  let shirt = x.createLinearGradient(0, h * 0.5, 0, h);
-  shirt.addColorStop(0, '#3a6f9c');
-  shirt.addColorStop(1, '#22405c');
-  x.fillStyle = shirt; x.fill(body);
+  // gradiente "plástico" para dar volumen 3D
+  const plastic = (gx, gy, r) => {
+    const g = x.createRadialGradient(gx - r * 0.36, gy - r * 0.42, r * 0.1, gx, gy, r * 1.18);
+    g.addColorStop(0, '#d6dbe1'); g.addColorStop(0.55, '#9aa0a8'); g.addColorStop(1, '#565c65');
+    return g;
+  };
 
-  // cuello
-  x.fillStyle = '#b07a58';
-  x.fillRect(cx - 42, h * 0.40, 84, h * 0.14);
+  // base de la silueta (evita huecos)
+  x.fillStyle = '#8990986e'.slice(0, 7); x.fill(body);
 
-  // --- pelo: masa trasera con volumen (gradiente y silueta suave) ---
-  const hairTop = headCy - headRy * 1.04;
-  const hairGrad = x.createLinearGradient(0, hairTop, 0, headCy + headRy * 0.6);
-  hairGrad.addColorStop(0, '#3d2c22');
-  hairGrad.addColorStop(1, '#1b130e');
-  x.fillStyle = hairGrad;
-  x.beginPath();
-  x.moveTo(cx - headRx - 8, headCy + headRy * 0.55);
-  x.bezierCurveTo(cx - headRx - 36, headCy - headRy * 0.35, cx - headRx * 0.7, hairTop, cx, hairTop);
-  x.bezierCurveTo(cx + headRx * 0.7, hairTop, cx + headRx + 36, headCy - headRy * 0.35, cx + headRx + 8, headCy + headRy * 0.55);
-  x.bezierCurveTo(cx + headRx * 0.6, headCy + headRy * 0.22, cx - headRx * 0.6, headCy + headRy * 0.22, cx - headRx - 8, headCy + headRy * 0.55);
-  x.closePath(); x.fill();
+  // torso segmentado
+  const torso = new Path2D();
+  torso.moveTo(cx - 150, h);
+  torso.bezierCurveTo(cx - 168, 560, cx - 158, 468, cx - 118, 430);
+  torso.quadraticCurveTo(cx, 402, cx + 118, 430);
+  torso.bezierCurveTo(cx + 158, 468, cx + 168, 560, cx + 150, h);
+  torso.closePath();
+  const tg = x.createLinearGradient(cx - 150, 0, cx + 150, 0);
+  tg.addColorStop(0, '#6b717a'); tg.addColorStop(0.5, '#aeb4bb'); tg.addColorStop(1, '#6b717a');
+  x.fillStyle = tg; x.fill(torso);
+  x.save(); x.clip(torso);
+  x.strokeStyle = 'rgba(40,44,50,0.55)'; x.lineWidth = 3; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(cx, 430); x.lineTo(cx, h); x.stroke();                       // columna
+  x.beginPath(); x.moveTo(cx - 120, 496); x.quadraticCurveTo(cx, 520, cx + 120, 496); x.stroke();
+  x.beginPath(); x.moveTo(cx - 128, 588); x.quadraticCurveTo(cx, 614, cx + 128, 588); x.stroke();
+  x.strokeStyle = 'rgba(255,255,255,0.10)'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(cx - 120, 492); x.quadraticCurveTo(cx, 516, cx + 120, 492); x.stroke();
+  x.restore();
 
-  // --- cabeza con sombreado de piel ---
-  const skin = x.createRadialGradient(cx - 34, headCy - 34, 20, cx, headCy, headRy);
-  skin.addColorStop(0, '#e6b48c');
-  skin.addColorStop(1, '#b3805e');
-  x.fillStyle = skin;
+  // hombros (rótulas)
+  [-1, 1].forEach((s) => {
+    x.fillStyle = plastic(cx + s * shX, shY, shR);
+    x.beginPath(); x.ellipse(cx + s * shX, shY, shR, shR, 0, 0, Math.PI * 2); x.fill();
+    // oclusión hombro-torso
+    x.save(); x.filter = 'blur(6px)'; x.fillStyle = 'rgba(20,22,26,0.4)';
+    x.beginPath(); x.ellipse(cx + s * 96, 430, 34, 24, 0, 0, Math.PI * 2); x.fill(); x.restore();
+  });
+
+  // cuello (rótula)
+  x.fillStyle = plastic(cx, neckY, 40);
+  x.beginPath(); x.ellipse(cx, neckY, 40, 44, 0, 0, Math.PI * 2); x.fill();
+
+  // cabeza
+  x.fillStyle = plastic(cx, headCy, headRy);
   x.beginPath(); x.ellipse(cx, headCy, headRx, headRy, 0, 0, Math.PI * 2); x.fill();
+  // oclusión cuello-cabeza
+  x.save(); x.filter = 'blur(7px)'; x.fillStyle = 'rgba(20,22,26,0.35)';
+  x.beginPath(); x.ellipse(cx, headCy + headRy - 8, 46, 20, 0, 0, Math.PI * 2); x.fill(); x.restore();
 
-  // orejas
-  x.fillStyle = '#bd8b64';
-  x.beginPath(); x.ellipse(cx - headRx + 3, headCy + 8, 13, 21, 0, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.ellipse(cx + headRx - 3, headCy + 8, 13, 21, 0, 0, Math.PI * 2); x.fill();
+  // rasgos de maniquí: cuencas, cresta nasal, líneas de panel
+  x.fillStyle = 'rgba(40,44,52,0.85)';
+  x.beginPath(); x.ellipse(cx - 30, headCy - 4, 15, 10, 0.2, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(cx + 30, headCy - 4, 15, 10, -0.2, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,0.16)'; x.lineWidth = 3; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(cx, headCy - 18); x.lineTo(cx, headCy + 34); x.stroke();     // cresta nasal
+  x.strokeStyle = 'rgba(40,44,52,0.4)'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(cx - headRx * 0.7, headCy - headRy * 0.55); x.quadraticCurveTo(cx, headCy - headRy * 0.72, cx + headRx * 0.7, headCy - headRy * 0.55); x.stroke(); // panel frente
+  x.beginPath(); x.arc(cx, headCy + 52, 20, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke(); // mentón
 
-  // --- rasgos ---
-  x.fillStyle = 'rgba(48,32,24,0.72)';
-  x.beginPath(); x.ellipse(cx - 40, headCy - 10, 9, 6, 0, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.ellipse(cx + 40, headCy - 10, 9, 6, 0, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = 'rgba(150,100,75,0.4)'; x.lineWidth = 3; x.lineCap = 'round';
-  x.beginPath(); x.moveTo(cx, headCy + 2); x.lineTo(cx - 6, headCy + 22); x.stroke();   // nariz
-  x.strokeStyle = 'rgba(120,78,58,0.5)'; x.lineWidth = 4;
-  x.beginPath(); x.moveTo(cx - 20, headCy + 46); x.quadraticCurveTo(cx, headCy + 56, cx + 20, headCy + 46); x.stroke();  // boca
-
-  // --- flequillo/línea del pelo por delante ---
-  x.fillStyle = hairGrad;
-  x.beginPath();
-  x.moveTo(cx - headRx - 4, headCy - headRy * 0.16);
-  x.bezierCurveTo(cx - headRx * 0.7, headCy - headRy * 0.80, cx - headRx * 0.2, headCy - headRy * 0.60, cx + 8, headCy - headRy * 0.52);
-  x.bezierCurveTo(cx + headRx * 0.35, headCy - headRy * 0.66, cx + headRx * 0.82, headCy - headRy * 0.74, cx + headRx + 4, headCy - headRy * 0.16);
-  x.bezierCurveTo(cx + headRx + 4, hairTop + 10, cx - headRx - 4, hairTop + 10, cx - headRx - 4, headCy - headRy * 0.16);
-  x.closePath(); x.fill();
-
-  // --- mechones sueltos: fuzz fino, denso y radial (el reto del alpha) ---
-  x.lineCap = 'round';
-  for (let i = 0; i < 150; i++) {
-    const ang = Math.PI + (i / 149) * Math.PI;              // semicírculo superior
-    const ox = cx + Math.cos(ang) * (headRx + 10);
-    const oy = (headCy - 12) + Math.sin(ang) * headRy;
-    let dx = ox - cx, dy = oy - (headCy - 12);
-    const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;    // dirección radial hacia afuera
-    const len = 7 + Math.random() * 30;
-    const drift = (Math.random() - 0.5) * 18;
-    const tipx = ox + dx * len - dy * drift;
-    const tipy = oy + dy * len + dx * drift - 4;            // leve sesgo hacia arriba
-    const midx = (ox + tipx) / 2 - dy * (Math.random() * 6);
-    const midy = (oy + tipy) / 2 + dx * (Math.random() * 6);
-    x.strokeStyle = 'rgba(26,18,13,' + (0.32 + Math.random() * 0.46).toFixed(2) + ')';
-    x.lineWidth = 0.7 + Math.random() * 1.0;
-    x.beginPath();
-    x.moveTo(ox, oy);
-    x.quadraticCurveTo(midx, midy, tipx, tipy);
-    x.stroke();
+  // ================= SPILL (defecto/lección despill) =================
+  if (cfg.spill > 0) {
+    x.save(); x.clip(body);
+    const sc = blue ? '90,150,255' : '60,200,90';
+    const sp = x.createLinearGradient(cx - 230, 0, cx + 230, 0);
+    sp.addColorStop(0.00, 'rgba(' + sc + ',' + (0.6 * cfg.spill) + ')');
+    sp.addColorStop(0.22, 'rgba(' + sc + ',0)');
+    sp.addColorStop(0.78, 'rgba(' + sc + ',0)');
+    sp.addColorStop(1.00, 'rgba(' + sc + ',' + (0.6 * cfg.spill) + ')');
+    x.globalCompositeOperation = 'lighter';
+    x.fillStyle = sp; x.fill(body);
+    if (cfg.spill > 0.7) { x.fillStyle = 'rgba(' + sc + ',' + (0.28 * cfg.spill) + ')'; x.fill(body); }
+    x.restore();
   }
 
-  // --- spill verde en los bordes del sujeto (para practicar despill) ---
-  x.save();
-  x.clip(body);
-  let spill = x.createLinearGradient(cx - 300, 0, cx + 300, 0);
-  spill.addColorStop(0.00, 'rgba(60,200,90,0.55)');
-  spill.addColorStop(0.18, 'rgba(60,200,90,0)');
-  spill.addColorStop(0.82, 'rgba(60,200,90,0)');
-  spill.addColorStop(1.00, 'rgba(60,200,90,0.55)');
-  x.globalCompositeOperation = 'lighter';
-  x.fillStyle = spill; x.fill(body);
-  x.restore();
-  // rim verde tenue alrededor de la cabeza
-  x.save();
-  x.globalCompositeOperation = 'lighter';
-  x.strokeStyle = 'rgba(70,210,110,0.35)'; x.lineWidth = 6;
-  x.beginPath(); x.ellipse(cx, headCy, headRx, headRy, 0, 0, Math.PI * 2); x.stroke();
-  x.restore();
-
-  // --- ruido: más fuerte en AZUL (lección G vs B) ---
+  // ================= RUIDO (más en el canal del croma opuesto) =================
   const id = x.getImageData(0, 0, w, h);
-  const d = id.data;
+  const d = id.data, n = cfg.noise;
   for (let i = 0; i < d.length; i += 4) {
-    d[i]     += (Math.random() - 0.5) * 7;    // R poco
-    d[i + 1] += (Math.random() - 0.5) * 7;    // G poco
-    d[i + 2] += (Math.random() - 0.5) * 32;   // B mucho ruido
+    d[i]     += (Math.random() - 0.5) * (n * 0.4);
+    d[i + 1] += (Math.random() - 0.5) * (blue ? n * 0.4 : n * 0.5);
+    d[i + 2] += (Math.random() - 0.5) * (blue ? n * 4.0 : n * 0.5);   // en verde, el azul es el ruidoso
   }
   x.putImageData(id, 0, 0);
-
   return c;
 }
-function loadDemo() {
+function loadScene(opts, hintKey) {
   teardownVideo();
   if (state.webcam) stopWebcam();
-  const c = buildDemo();
+  const c = buildScene(opts);
   setImageSource(c, c.width, c.height);
-  // deja preparado un color clave del verde BIEN iluminado (no la viñeta oscura),
-  // pero SIN aplicar el key: arranca en Original para que lo hagan paso a paso.
-  pickAt(Math.round(c.width * 0.24), Math.round(c.height * 0.28));
+  demoHintKey = hintKey || null;
+  updateExampleHint();
+  // color clave preparado desde el croma (arriba, centro), pero SIN aplicar:
+  // arranca en Original para que lo hagan paso a paso.
+  pickAt(Math.round(c.width * 0.5), Math.round(c.height * 0.06));
   setView(1);
 }
+function loadDemo() { loadScene({}, null); }
 
 /* ------------------------------------------------------------------ */
 /*  Cuentagotas                                                        */
@@ -910,6 +981,52 @@ $('fileInput').addEventListener('change', (e) => { loadFile(e.target.files[0]); 
 $('btnDemo').addEventListener('click', loadDemo);
 $('btnWebcam').addEventListener('click', () => { state.webcam ? stopWebcam() : startWebcam(); });
 $('btnFreeze').addEventListener('click', toggleFreeze);
+
+// ejemplos de croma (bueno / malos)
+const EXAMPLES = {
+  good:   [{}, 'ex.hint.good'],
+  uneven: [{ lighting: 'uneven', noise: 12 }, 'ex.hint.uneven'],
+  shadow: [{ shadow: true }, 'ex.hint.shadow'],
+  noise:  [{ noise: 46, spill: 0.35 }, 'ex.hint.noise'],
+  spill:  [{ spill: 1.0 }, 'ex.hint.spill'],
+  blue:   [{ screen: 'blue' }, 'ex.hint.blue'],
+};
+document.querySelectorAll('.ex').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    const [opts, hint] = EXAMPLES[b.dataset.ex];
+    loadScene(opts, hint);
+  });
+});
+
+// reset total: vuelve al estado inicial
+function resetAll() {
+  if (state.webcam) stopWebcam();
+  teardownVideo();
+  state.hasImage = false; state.hasBg = false;
+  state.key = [0.0, 0.694, 0.251];
+  state.tol = 0.12; state.soft = 0.10; state.despill = 0.0; state.keyChan = 1;
+  state.wrap = 0.0; state.wrapRadius = 8.0;
+  state.mode = 0; state.scope = 'off'; state.picking = false;
+  demoHintKey = null;
+  $('tolerance').value = '0.12'; $('tolOut').textContent = '0.120';
+  $('softness').value = '0.10'; $('softOut').textContent = '0.100';
+  $('despill').value = '0'; $('despillOut').textContent = '0.00';
+  $('wrap').value = '0'; $('wrapOut').textContent = '0.00';
+  $('wrapRadius').value = '8'; $('wrapRadiusOut').textContent = '8';
+  $('keyColor').value = '#00b140'; $('keySwatch').style.background = '#00b140';
+  $('btnPick').classList.remove('on'); $('canvasWrap').classList.remove('picking');
+  document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
+  document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
+  document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
+  ['gridLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'nodemap', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
+  $('dropHint').hidden = false;
+  updateKeyChan(); updateViewHint(); updatePickLabel(); updateExampleHint();
+  canvas.width = 300; canvas.height = 150;
+  render();
+}
+$('btnReset').addEventListener('click', resetAll);
 
 // timeline (scrub) + fotograma ±1
 $('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
@@ -943,6 +1060,7 @@ canvas.addEventListener('click', (e) => {
   const ix = (e.clientX - r.left) / r.width * canvas.width;
   const iy = (e.clientY - r.top) / r.height * canvas.height;
   pickAt(ix, iy);
+  setView(0);   // salta a Compuesto para ver el resultado del key
 });
 function updatePickLabel() {
   $('btnPick').textContent = state.picking ? t('pick.on') : t('key.pick');

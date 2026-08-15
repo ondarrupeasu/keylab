@@ -51,6 +51,7 @@ body {
 }
 .tag { color: var(--muted); font-size: 13px; }
 
+.top-actions { display: flex; align-items: center; gap: 12px; }
 .langs { display: flex; gap: 4px; }
 .lang {
   background: transparent;
@@ -150,7 +151,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* views */
 .views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.view, .scope {
+.view, .scope, .ex {
   background: var(--bg-2);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -160,8 +161,8 @@ input[type="range"]::-moz-range-thumb {
   font-size: 12px;
   font-weight: 600;
 }
-.view:hover, .scope:hover { color: var(--text); border-color: #3a4150; }
-.view.active, .scope.active { color: var(--coral-2); background: var(--coral-dim); border-color: var(--coral); }
+.view:hover, .scope:hover, .ex:hover { color: var(--text); border-color: #3a4150; }
+.view.active, .scope.active, .ex.active { color: var(--coral-2); background: var(--coral-dim); border-color: var(--coral); }
 .scope[data-scope="vectorscope"] { grid-column: span 2; }
 
 /* ---- Stage ---- */
