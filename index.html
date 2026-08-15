@@ -61,6 +61,24 @@
       </section>
 
       <section class="group">
+        <h2 data-i18n="bg.title">Fondo y light wrap</h2>
+        <div class="row">
+          <button id="btnBg" class="btn" data-i18n="bg.load">Cargar fondo…</button>
+          <button id="btnBgClear" class="btn" data-i18n="bg.clear" hidden>Quitar</button>
+        </div>
+        <input id="bgInput" type="file" accept="image/*" hidden />
+        <label class="slider">
+          <span><span data-i18n="bg.wrap">Light wrap</span> <output id="wrapOut">0.00</output></span>
+          <input id="wrap" type="range" min="0" max="1" step="0.02" value="0" />
+        </label>
+        <label class="slider">
+          <span><span data-i18n="bg.radius">Radio</span> <output id="wrapRadiusOut">8</output></span>
+          <input id="wrapRadius" type="range" min="1" max="30" step="1" value="8" />
+        </label>
+        <p class="hint" data-i18n="bg.hint">El compuesto se ve sobre esta imagen; el light wrap envuelve sus colores en los bordes del sujeto (solo en vista Compuesto).</p>
+      </section>
+
+      <section class="group">
         <h2 data-i18n="view.title">Vista</h2>
         <div class="views">
           <button class="view active" data-mode="0" data-i18n="view.composite">Compuesto</button>

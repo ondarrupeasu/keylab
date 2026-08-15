@@ -17,6 +17,12 @@ const I18N = {
     'media.badcodec': 'No se puede decodificar este vídeo en el navegador (¿ProRes o HEVC?). Prueba con MP4 (H.264) o WebM.',
     'key.despill': 'Despill',
     'key.despill.hint': 'Despill: quita el tinte del croma que se cuela en los bordes del sujeto.',
+    'bg.title': 'Fondo y light wrap',
+    'bg.load': 'Cargar fondo…',
+    'bg.clear': 'Quitar',
+    'bg.wrap': 'Light wrap',
+    'bg.radius': 'Radio',
+    'bg.hint': 'El compuesto se ve sobre esta imagen; el light wrap envuelve sus colores en los bordes del sujeto (solo en vista Compuesto).',
     'scope.title': 'Scopes',
     'scope.off': 'Ninguno',
     'scope.hist': 'Histograma',
@@ -52,6 +58,12 @@ const I18N = {
     'media.badcodec': 'Bideo hau ezin da nabigatzailean deskodetu (ProRes edo HEVC?). Saiatu MP4 (H.264) edo WebM formatuarekin.',
     'key.despill': 'Despill',
     'key.despill.hint': 'Despill: subjektuaren ertzetan sartzen den kroma-tindua kentzen du.',
+    'bg.title': 'Atzealdea eta light wrap',
+    'bg.load': 'Kargatu atzealdea…',
+    'bg.clear': 'Kendu',
+    'bg.wrap': 'Light wrap',
+    'bg.radius': 'Erradioa',
+    'bg.hint': 'Konposatua irudi honen gainean ikusten da; light wrap-ek bere koloreak subjektuaren ertzetan biltzen ditu (Konposatua ikuspegian soilik).',
     'scope.title': 'Scope-ak',
     'scope.off': 'Bat ere ez',
     'scope.hist': 'Histograma',
@@ -87,6 +99,12 @@ const I18N = {
     'media.badcodec': 'This video can’t be decoded in the browser (ProRes or HEVC?). Try MP4 (H.264) or WebM.',
     'key.despill': 'Despill',
     'key.despill.hint': 'Despill: removes the chroma tint that spills onto the subject’s edges.',
+    'bg.title': 'Background & light wrap',
+    'bg.load': 'Load background…',
+    'bg.clear': 'Remove',
+    'bg.wrap': 'Light wrap',
+    'bg.radius': 'Radius',
+    'bg.hint': 'The composite is shown over this image; light wrap wraps its colours onto the subject’s edges (Composite view only).',
     'scope.title': 'Scopes',
     'scope.off': 'None',
     'scope.hist': 'Histogram',
@@ -161,6 +179,10 @@ uniform int   uMode;       // 0 compuesto, 1 original, 2 alpha, 3 rgba
 uniform vec2  uRes;        // resolución del canvas (px)
 uniform float uDespill;    // cantidad de despill 0..1
 uniform int   uKeyChan;    // canal dominante del croma: 0=R 1=G 2=B
+uniform sampler2D uBgTex;  // imagen de fondo
+uniform int   uHasBg;      // 1 si hay fondo cargado
+uniform float uWrap;       // cantidad de light wrap 0..1
+uniform float uWrapRadius; // radio del light wrap en px
 
 // crominancia YCbCr (Rec.601)
 vec2 chroma(vec3 c) {
@@ -233,9 +255,29 @@ void main() {
     return;
   }
 
-  // compuesto sobre ajedrezado (con despill en el primer plano)
-  vec3 bg = checker(vUv * uRes);
+  // primer plano con despill
   vec3 fg = despill(src.rgb);
+  // fondo: imagen cargada o ajedrezado de transparencia
+  vec3 bg = (uHasBg == 1) ? texture(uBgTex, uv).rgb : checker(vUv * uRes);
+
+  // light wrap: envuelve la luz del fondo en el borde interior del sujeto
+  if (uHasBg == 1 && uWrap > 0.0) {
+    const int N = 12;
+    vec2 px = vec2(uWrapRadius) / uRes;
+    float near = 0.0;
+    vec3 bgAvg = vec3(0.0);
+    for (int i = 0; i < N; i++) {
+      float ph = 6.2831853 * float(i) / float(N);
+      vec2 off = vec2(cos(ph), sin(ph)) * px;
+      near  += 1.0 - keyAlpha(texture(uTex, uv + off).rgb);  // cuánto fondo hay alrededor
+      bgAvg += texture(uBgTex, uv + off).rgb;
+    }
+    near  /= float(N);
+    bgAvg /= float(N);
+    float mask = a * near;                     // dentro del sujeto y cerca del borde
+    fg = mix(fg, bgAvg, clamp(uWrap * mask, 0.0, 1.0));
+  }
+
   outColor = vec4(mix(bg, fg, a), 1.0);
 }`;
 
@@ -280,15 +322,27 @@ const U = {
   res:  gl.getUniformLocation(prog, 'uRes'),
   despill: gl.getUniformLocation(prog, 'uDespill'),
   keyChan: gl.getUniformLocation(prog, 'uKeyChan'),
+  bgTex: gl.getUniformLocation(prog, 'uBgTex'),
+  hasBg: gl.getUniformLocation(prog, 'uHasBg'),
+  wrap: gl.getUniformLocation(prog, 'uWrap'),
+  wrapRadius: gl.getUniformLocation(prog, 'uWrapRadius'),
 };
 
-const tex = gl.createTexture();
-gl.bindTexture(gl.TEXTURE_2D, tex);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+function makeTex(unit) {
+  const tx = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit);
+  gl.bindTexture(gl.TEXTURE_2D, tx);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  return tx;
+}
+const tex = makeTex(0);     // primer plano (unidad 0)
+const bgTex = makeTex(1);   // fondo (unidad 1)
+gl.activeTexture(gl.TEXTURE0);
 gl.uniform1i(U.tex, 0);
+gl.uniform1i(U.bgTex, 1);
 
 /* ------------------------------------------------------------------ */
 /*  Estado                                                             */
@@ -304,6 +358,9 @@ const state = {
   mode: 0,
   scope: 'off',
   picking: false,
+  hasBg: false,
+  wrap: 0.0,
+  wrapRadius: 8.0,
 };
 // canvas 2D auxiliar para muestrear color exacto (cuentagotas)
 const srcCanvas = document.createElement('canvas');
@@ -318,6 +375,11 @@ function render() {
   gl.uniform2f(U.res, canvas.width, canvas.height);
   gl.uniform1f(U.despill, state.despill);
   gl.uniform1i(U.keyChan, state.keyChan);
+  gl.uniform1i(U.hasBg, state.hasBg ? 1 : 0);
+  gl.uniform1f(U.wrap, state.wrap);
+  gl.uniform1f(U.wrapRadius, state.wrapRadius);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bgTex);
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
   if (state.hasImage) gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -359,6 +421,7 @@ function setImageSource(source, w, h) {
   canvas.width = tw;
   canvas.height = th;
 
+  gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
@@ -378,6 +441,29 @@ function loadImageFile(file) {
     URL.revokeObjectURL(img.src);
   };
   img.src = URL.createObjectURL(file);
+}
+
+/* --- imagen de fondo para el compuesto + light wrap --- */
+function loadBackgroundFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const img = new Image();
+  img.onload = () => {
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, bgTex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.activeTexture(gl.TEXTURE0);
+    state.hasBg = true;
+    $('btnBgClear').hidden = false;
+    render();
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+function clearBackground() {
+  state.hasBg = false;
+  $('btnBgClear').hidden = true;
+  render();
 }
 
 /* --- vídeo local: modo fotograma congelado (sin play) --- */
@@ -556,51 +642,70 @@ function buildDemo() {
   x.fillStyle = '#b07a58';
   x.fillRect(cx - 42, h * 0.40, 84, h * 0.14);
 
-  // pelo (masa por detrás, borde irregular)
-  x.fillStyle = '#241a15';
+  // --- pelo: masa trasera con volumen (gradiente y silueta suave) ---
+  const hairTop = headCy - headRy * 1.04;
+  const hairGrad = x.createLinearGradient(0, hairTop, 0, headCy + headRy * 0.6);
+  hairGrad.addColorStop(0, '#3d2c22');
+  hairGrad.addColorStop(1, '#1b130e');
+  x.fillStyle = hairGrad;
   x.beginPath();
-  x.ellipse(cx, headCy - 18, headRx + 20, headRy + 6, 0, 0, Math.PI * 2);
-  x.fill();
+  x.moveTo(cx - headRx - 8, headCy + headRy * 0.55);
+  x.bezierCurveTo(cx - headRx - 36, headCy - headRy * 0.35, cx - headRx * 0.7, hairTop, cx, hairTop);
+  x.bezierCurveTo(cx + headRx * 0.7, hairTop, cx + headRx + 36, headCy - headRy * 0.35, cx + headRx + 8, headCy + headRy * 0.55);
+  x.bezierCurveTo(cx + headRx * 0.6, headCy + headRy * 0.22, cx - headRx * 0.6, headCy + headRy * 0.22, cx - headRx - 8, headCy + headRy * 0.55);
+  x.closePath(); x.fill();
 
-  // cabeza con sombreado de piel
-  let skin = x.createRadialGradient(cx - 34, headCy - 34, 20, cx, headCy, headRy);
-  skin.addColorStop(0, '#e0ad86');
+  // --- cabeza con sombreado de piel ---
+  const skin = x.createRadialGradient(cx - 34, headCy - 34, 20, cx, headCy, headRy);
+  skin.addColorStop(0, '#e6b48c');
   skin.addColorStop(1, '#b3805e');
   x.fillStyle = skin;
   x.beginPath(); x.ellipse(cx, headCy, headRx, headRy, 0, 0, Math.PI * 2); x.fill();
 
-  // rasgos mínimos (para que parezca sujeto, no una mancha)
-  x.fillStyle = 'rgba(60,40,30,0.55)';
-  x.beginPath(); x.ellipse(cx - 42, headCy - 12, 10, 6, 0, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.ellipse(cx + 42, headCy - 12, 10, 6, 0, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = 'rgba(120,70,55,0.5)'; x.lineWidth = 4;
-  x.beginPath(); x.moveTo(cx - 18, headCy + 44); x.quadraticCurveTo(cx, headCy + 54, cx + 18, headCy + 44); x.stroke();
+  // orejas
+  x.fillStyle = '#bd8b64';
+  x.beginPath(); x.ellipse(cx - headRx + 3, headCy + 8, 13, 21, 0, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(cx + headRx - 3, headCy + 8, 13, 21, 0, 0, Math.PI * 2); x.fill();
 
-  // flequillo/pelo por delante (parte superior de la cabeza)
-  x.fillStyle = '#2b201a';
+  // --- rasgos ---
+  x.fillStyle = 'rgba(48,32,24,0.72)';
+  x.beginPath(); x.ellipse(cx - 40, headCy - 10, 9, 6, 0, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(cx + 40, headCy - 10, 9, 6, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(150,100,75,0.4)'; x.lineWidth = 3; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(cx, headCy + 2); x.lineTo(cx - 6, headCy + 22); x.stroke();   // nariz
+  x.strokeStyle = 'rgba(120,78,58,0.5)'; x.lineWidth = 4;
+  x.beginPath(); x.moveTo(cx - 20, headCy + 46); x.quadraticCurveTo(cx, headCy + 56, cx + 20, headCy + 46); x.stroke();  // boca
+
+  // --- flequillo/línea del pelo por delante ---
+  x.fillStyle = hairGrad;
   x.beginPath();
-  x.moveTo(cx - headRx, headCy - 6);
-  x.quadraticCurveTo(cx - headRx * 0.5, headCy - headRy * 1.05, cx, headCy - headRy * 0.86);
-  x.quadraticCurveTo(cx + headRx * 0.5, headCy - headRy * 1.05, cx + headRx, headCy - 6);
-  x.quadraticCurveTo(cx, headCy - headRy * 0.55, cx - headRx, headCy - 6);
+  x.moveTo(cx - headRx - 4, headCy - headRy * 0.16);
+  x.bezierCurveTo(cx - headRx * 0.7, headCy - headRy * 0.80, cx - headRx * 0.2, headCy - headRy * 0.60, cx + 8, headCy - headRy * 0.52);
+  x.bezierCurveTo(cx + headRx * 0.35, headCy - headRy * 0.66, cx + headRx * 0.82, headCy - headRy * 0.74, cx + headRx + 4, headCy - headRy * 0.16);
+  x.bezierCurveTo(cx + headRx + 4, hairTop + 10, cx - headRx - 4, hairTop + 10, cx - headRx - 4, headCy - headRy * 0.16);
   x.closePath(); x.fill();
 
-  // mechones sueltos (el reto clásico del alpha): pelillos finos hacia el fondo
-  x.strokeStyle = 'rgba(30,22,17,0.8)';
-  x.lineWidth = 1.4;
-  for (let i = 0; i < 60; i++) {
-    const ang = Math.PI + (i / 59) * Math.PI;              // semicírculo superior
-    const ox = cx + Math.cos(ang) * (headRx + 8);
-    const oy = headCy - 22 + Math.sin(ang) * (headRy - 10);
-    const len = 14 + Math.random() * 34;
-    const drift = (Math.random() - 0.5) * 26;
-    x.globalAlpha = 0.5 + Math.random() * 0.4;
+  // --- mechones sueltos: fuzz fino, denso y radial (el reto del alpha) ---
+  x.lineCap = 'round';
+  for (let i = 0; i < 150; i++) {
+    const ang = Math.PI + (i / 149) * Math.PI;              // semicírculo superior
+    const ox = cx + Math.cos(ang) * (headRx + 10);
+    const oy = (headCy - 12) + Math.sin(ang) * headRy;
+    let dx = ox - cx, dy = oy - (headCy - 12);
+    const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;    // dirección radial hacia afuera
+    const len = 7 + Math.random() * 30;
+    const drift = (Math.random() - 0.5) * 18;
+    const tipx = ox + dx * len - dy * drift;
+    const tipy = oy + dy * len + dx * drift - 4;            // leve sesgo hacia arriba
+    const midx = (ox + tipx) / 2 - dy * (Math.random() * 6);
+    const midy = (oy + tipy) / 2 + dx * (Math.random() * 6);
+    x.strokeStyle = 'rgba(26,18,13,' + (0.32 + Math.random() * 0.46).toFixed(2) + ')';
+    x.lineWidth = 0.7 + Math.random() * 1.0;
     x.beginPath();
     x.moveTo(ox, oy);
-    x.quadraticCurveTo(ox + drift * 0.5, oy - len * 0.6, ox + drift, oy - len);
+    x.quadraticCurveTo(midx, midy, tipx, tipy);
     x.stroke();
   }
-  x.globalAlpha = 1;
 
   // --- spill verde en los bordes del sujeto (para practicar despill) ---
   x.save();
@@ -718,6 +823,21 @@ $('keyColor').addEventListener('input', (e) => {
   updateKeyChan();
   render();
   updateScopes();
+});
+
+// fondo + light wrap
+$('btnBg').addEventListener('click', () => $('bgInput').click());
+$('bgInput').addEventListener('change', (e) => { loadBackgroundFile(e.target.files[0]); });
+$('btnBgClear').addEventListener('click', clearBackground);
+$('wrap').addEventListener('input', (e) => {
+  state.wrap = parseFloat(e.target.value);
+  $('wrapOut').textContent = state.wrap.toFixed(2);
+  render();
+});
+$('wrapRadius').addEventListener('input', (e) => {
+  state.wrapRadius = parseFloat(e.target.value);
+  $('wrapRadiusOut').textContent = String(state.wrapRadius | 0);
+  render();
 });
 
 // sliders
