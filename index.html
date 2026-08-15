@@ -31,6 +31,7 @@
         <div class="row">
           <button id="btnLoad" class="btn primary" data-i18n="src.load">Cargar imagen o vídeo…</button>
           <button id="btnDemo" class="btn" data-i18n="src.demo">Demo</button>
+          <button id="btnWebcam" class="btn" data-i18n="src.webcam">Webcam</button>
         </div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden />
         <p class="hint" data-i18n="src.hint">Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.</p>
@@ -138,9 +139,17 @@
       </div>
       <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
 
+      <div class="webcam-bar" id="webcamBar" hidden>
+        <span class="live-dot"></span>
+        <span data-i18n="webcam.live">En directo</span>
+        <button id="btnFreeze" class="btn" data-i18n="webcam.freeze">Congelar</button>
+      </div>
+
       <div class="scopes" id="scopes" hidden>
         <canvas id="scopeCanvas"></canvas>
       </div>
+
+      <div class="nodemap" id="nodemap" hidden></div>
     </section>
   </main>
 

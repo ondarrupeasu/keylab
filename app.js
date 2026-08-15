@@ -12,7 +12,18 @@ const I18N = {
     'src.title': 'Fuente',
     'src.load': 'Cargar imagen o vídeo…',
     'src.demo': 'Demo',
+    'src.webcam': 'Webcam',
     'src.hint': 'Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.',
+    'webcam.live': 'En directo',
+    'webcam.freeze': 'Congelar',
+    'webcam.resume': 'Reanudar',
+    'webcam.error': 'No se pudo acceder a la cámara. Da permiso al navegador (y usa https).',
+    'nm.source': 'Fuente',
+    'nm.key': 'Key',
+    'nm.despill': 'Despill',
+    'nm.bg': 'Fondo',
+    'nm.merge': 'Merge',
+    'nm.lw': 'light wrap',
     'media.frozen': 'Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.',
     'media.badcodec': 'No se puede decodificar este vídeo en el navegador (¿ProRes o HEVC?). Prueba con MP4 (H.264) o WebM.',
     'key.despill': 'Despill',
@@ -53,7 +64,18 @@ const I18N = {
     'src.title': 'Iturria',
     'src.load': 'Kargatu irudia edo bideoa…',
     'src.demo': 'Demo',
+    'src.webcam': 'Webcama',
     'src.hint': 'Arrastatu irudi edo bideo bat hona. Dena lokala da: ezer ez da internetera igotzen.',
+    'webcam.live': 'Zuzenean',
+    'webcam.freeze': 'Izoztu',
+    'webcam.resume': 'Berrekin',
+    'webcam.error': 'Ezin izan da kamera atzitu. Eman baimena nabigatzaileari (eta erabili https).',
+    'nm.source': 'Iturria',
+    'nm.key': 'Key',
+    'nm.despill': 'Despill',
+    'nm.bg': 'Atzealdea',
+    'nm.merge': 'Merge',
+    'nm.lw': 'light wrap',
     'media.frozen': 'Fotograma izoztuaren modua: mugitu denbora-lerroa eta aukeratu markoa. Ez da jarraian erreproduzitzen.',
     'media.badcodec': 'Bideo hau ezin da nabigatzailean deskodetu (ProRes edo HEVC?). Saiatu MP4 (H.264) edo WebM formatuarekin.',
     'key.despill': 'Despill',
@@ -94,7 +116,18 @@ const I18N = {
     'src.title': 'Source',
     'src.load': 'Load image or video…',
     'src.demo': 'Demo',
+    'src.webcam': 'Webcam',
     'src.hint': 'Drop an image or video here. Everything is local: nothing is uploaded.',
+    'webcam.live': 'Live',
+    'webcam.freeze': 'Freeze',
+    'webcam.resume': 'Resume',
+    'webcam.error': 'Could not access the camera. Grant the browser permission (and use https).',
+    'nm.source': 'Source',
+    'nm.key': 'Key',
+    'nm.despill': 'Despill',
+    'nm.bg': 'Background',
+    'nm.merge': 'Merge',
+    'nm.lw': 'light wrap',
     'media.frozen': 'Frozen-frame mode: move the timeline and pick the frame. It does not play back.',
     'media.badcodec': 'This video can’t be decoded in the browser (ProRes or HEVC?). Try MP4 (H.264) or WebM.',
     'key.despill': 'Despill',
@@ -361,6 +394,8 @@ const state = {
   hasBg: false,
   wrap: 0.0,
   wrapRadius: 8.0,
+  webcam: false,
+  webcamPaused: false,
 };
 // canvas 2D auxiliar para muestrear color exacto (cuentagotas)
 const srcCanvas = document.createElement('canvas');
@@ -406,6 +441,44 @@ function setView(mode) {
   $('gridLabels').hidden = mode !== 3;
   updateViewHint();
   render();
+  updateNodeMap();
+}
+
+// mapa de nodos (flujo de la señal, estilo Fusion): refleja el estado y es clicable
+function updateNodeMap() {
+  const el = $('nodemap');
+  if (!state.hasImage) { el.hidden = true; return; }
+  el.hidden = false;
+  const m = state.mode, NW = 104, NH = 40, yC = 8 + NH / 2;
+  const cls = (cur, lit) => (cur ? 'cur ' : '') + (lit ? 'lit' : '');
+  const outLabel = t(['view.composite', 'view.original', 'view.alpha', 'view.rgba'][m]);
+  const nodes = [
+    { x: 6,   y: 8,  label: t('nm.source'),  cls: cls(m === 1 || m === 3, true), act: 1 },
+    { x: 150, y: 8,  label: t('nm.key'),     cls: cls(m === 2, true),            act: 2 },
+    { x: 294, y: 8,  label: t('nm.despill'), cls: cls(false, state.despill > 0), act: 0 },
+    { x: 470, y: 8,  label: t('nm.merge'),   cls: cls(false, true),              act: 0 },
+    { x: 614, y: 8,  label: outLabel,        cls: cls(m === 0, true),            act: 0 },
+    { x: 470, y: 72, label: t('nm.bg'),      cls: cls(false, state.hasBg), act: 0, off: !state.hasBg },
+  ];
+  const link = (x1, y1, x2, y2, lit) =>
+    `<line class="nm-link ${lit ? 'lit' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#nmArrow)"/>`;
+  let svg = '<svg viewBox="0 0 724 120" xmlns="http://www.w3.org/2000/svg">';
+  svg += '<defs><marker id="nmArrow" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5a6472"/></marker></defs>';
+  svg += link(110, yC, 150, yC);
+  svg += link(254, yC, 294, yC);
+  svg += link(398, yC, 470, yC);
+  svg += link(574, yC, 614, yC);
+  svg += link(522, 72, 522, 48, state.hasBg);                 // Fondo -> Merge
+  svg += `<text class="nm-badge ${state.hasBg && state.wrap > 0 ? '' : 'off'}" x="530" y="63">${t('nm.lw')}</text>`;
+  for (const n of nodes) {
+    svg += `<g class="nm-node ${n.cls} ${n.off ? 'off' : ''}" data-act="${n.act}" transform="translate(${n.x},${n.y})">` +
+      `<rect width="${NW}" height="${NH}" rx="8"/>` +
+      `<text x="${NW / 2}" y="${NH / 2 + 4}" text-anchor="middle">${n.label}</text></g>`;
+  }
+  svg += '</svg>';
+  el.innerHTML = svg;
+  el.querySelectorAll('.nm-node').forEach((g) =>
+    g.addEventListener('click', () => setView(parseInt(g.dataset.act, 10))));
 }
 
 function setImageSource(source, w, h) {
@@ -456,6 +529,7 @@ function loadBackgroundFile(file) {
     state.hasBg = true;
     $('btnBgClear').hidden = false;
     render();
+    updateNodeMap();
     URL.revokeObjectURL(img.src);
   };
   img.src = URL.createObjectURL(file);
@@ -464,6 +538,7 @@ function clearBackground() {
   state.hasBg = false;
   $('btnBgClear').hidden = true;
   render();
+  updateNodeMap();
 }
 
 /* --- vídeo local: modo fotograma congelado (sin play) --- */
@@ -589,8 +664,67 @@ function loadVideoFile(file) {
 
 function loadFile(file) {
   if (!file) return;
+  if (state.webcam) stopWebcam();
   if (file.type.startsWith('video/')) loadVideoFile(file);
   else if (file.type.startsWith('image/')) loadImageFile(file);
+}
+
+/* --- webcam / cámara virtual (getUserMedia): en directo, con congelar --- */
+let webcamRAF = 0, webcamTick = 0;
+function stopWebcamStream() {
+  if (video.srcObject) { video.srcObject.getTracks().forEach((tk) => tk.stop()); video.srcObject = null; }
+}
+function drawWebcamFrame() {
+  const w = video.videoWidth, h = video.videoHeight;
+  if (!w) return;
+  if (srcCanvas.width !== w || srcCanvas.height !== h) {
+    srcCanvas.width = w; srcCanvas.height = h; canvas.width = w; canvas.height = h;
+  }
+  srcCtx.drawImage(video, 0, 0, w, h);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCanvas);
+  state.hasImage = true;
+  document.getElementById('dropHint').hidden = true;
+  render();
+  if ((webcamTick++ % 6) === 0) updateScopes();   // scopes con menos frecuencia
+}
+function webcamLoop() {
+  if (!state.webcam) return;
+  if (!state.webcamPaused) drawWebcamFrame();
+  webcamRAF = requestAnimationFrame(webcamLoop);
+}
+async function startWebcam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
+    });
+    teardownVideo();
+    stopWebcamStream();
+    video.srcObject = stream;
+    await video.play();
+    state.webcam = true; state.webcamPaused = false;
+    $('btnWebcam').classList.add('on');
+    $('webcamBar').hidden = false;
+    $('btnFreeze').textContent = t('webcam.freeze');
+    setView(1);                 // arranca en Original (paso a paso)
+    webcamLoop();
+  } catch (e) {
+    alert(t('webcam.error'));
+  }
+}
+function stopWebcam() {
+  state.webcam = false;
+  cancelAnimationFrame(webcamRAF);
+  stopWebcamStream();
+  $('btnWebcam').classList.remove('on');
+  $('webcamBar').hidden = true;
+}
+function toggleFreeze() {
+  state.webcamPaused = !state.webcamPaused;
+  $('btnFreeze').textContent = state.webcamPaused ? t('webcam.resume') : t('webcam.freeze');
+  if (state.webcamPaused) updateScopes();
 }
 
 /* --- imagen demo generada: croma verde realista (iluminación desigual,
@@ -739,6 +873,7 @@ function buildDemo() {
 }
 function loadDemo() {
   teardownVideo();
+  if (state.webcam) stopWebcam();
   const c = buildDemo();
   setImageSource(c, c.width, c.height);
   // deja preparado un color clave del verde BIEN iluminado (no la viñeta oscura),
@@ -773,6 +908,8 @@ const $ = (id) => document.getElementById(id);
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
 $('fileInput').addEventListener('change', (e) => { loadFile(e.target.files[0]); });
 $('btnDemo').addEventListener('click', loadDemo);
+$('btnWebcam').addEventListener('click', () => { state.webcam ? stopWebcam() : startWebcam(); });
+$('btnFreeze').addEventListener('click', toggleFreeze);
 
 // timeline (scrub) + fotograma ±1
 $('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
@@ -833,6 +970,7 @@ $('wrap').addEventListener('input', (e) => {
   state.wrap = parseFloat(e.target.value);
   $('wrapOut').textContent = state.wrap.toFixed(2);
   render();
+  updateNodeMap();
 });
 $('wrapRadius').addEventListener('input', (e) => {
   state.wrapRadius = parseFloat(e.target.value);
@@ -845,6 +983,7 @@ $('despill').addEventListener('input', (e) => {
   state.despill = parseFloat(e.target.value);
   $('despillOut').textContent = state.despill.toFixed(2);
   render();
+  updateNodeMap();
 });
 $('tolerance').addEventListener('input', (e) => {
   state.tol = parseFloat(e.target.value);

@@ -272,6 +272,52 @@ canvas#gl {
 .drop-hint .small { font-size: 13px; font-weight: 400; color: var(--muted); }
 .stage.dragover .drop-hint { outline: 2px dashed var(--coral); outline-offset: -12px; }
 
+/* barra de webcam en directo */
+.webcam-bar {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; max-width: 720px;
+  color: var(--muted); font-size: 13px;
+}
+.webcam-bar[hidden] { display: none; }
+.live-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #ff4d4d; box-shadow: 0 0 0 0 rgba(255,77,77,.6);
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,77,77,.55); }
+  70% { box-shadow: 0 0 0 8px rgba(255,77,77,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); }
+}
+.webcam-bar .btn { margin-left: auto; padding: 5px 10px; }
+
+/* mapa de nodos (flujo de señal, estilo Fusion) */
+.nodemap {
+  width: 100%; max-width: 760px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #10131a;
+  padding: 6px 8px;
+}
+.nodemap[hidden] { display: none; }
+.nodemap svg { width: 100%; height: auto; display: block; }
+.nm-node rect {
+  fill: #1b1f27; stroke: #333a46; stroke-width: 1.5;
+  transition: stroke .15s, fill .15s;
+}
+.nm-node text { fill: var(--muted); font: 600 12px system-ui, sans-serif; }
+.nm-node { cursor: pointer; }
+.nm-node:hover rect { stroke: #4a5361; }
+.nm-node.lit rect { stroke: var(--coral); }
+.nm-node.lit text { fill: var(--coral-2); }
+.nm-node.cur rect { fill: var(--coral-dim); stroke: var(--coral); stroke-width: 2; }
+.nm-node.cur text { fill: var(--coral-2); }
+.nm-node.off rect { stroke-dasharray: 4 3; opacity: .55; }
+.nm-link { stroke: #3a4150; stroke-width: 2; fill: none; }
+.nm-link.lit { stroke: var(--coral); }
+.nm-badge { fill: var(--coral); font: 700 10px system-ui, sans-serif; }
+.nm-badge.off { fill: #4a5361; }
+
 /* ---- Footer ---- */
 .foot {
   padding: 10px 18px;
