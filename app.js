@@ -9,10 +9,12 @@
 const I18N = {
   es: {
     subtitle: 'Laboratorio de croma',
-    'src.title': 'Imagen',
-    'src.load': 'Cargar imagen…',
+    'src.title': 'Fuente',
+    'src.load': 'Cargar imagen o vídeo…',
     'src.demo': 'Demo',
-    'src.hint': 'Arrastra una imagen aquí. Todo es local: nada se sube a internet.',
+    'src.hint': 'Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.',
+    'media.frozen': 'Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.',
+    'media.badcodec': 'No se puede decodificar este vídeo en el navegador (¿ProRes o HEVC?). Prueba con MP4 (H.264) o WebM.',
     'key.title': 'Chroma key',
     'key.pick': 'Cuentagotas',
     'key.tolerance': 'Tolerancia',
@@ -26,17 +28,19 @@ const I18N = {
     'view.hint.original': 'La imagen tal cual, sin key.',
     'view.hint.alpha': 'El matte: blanco = sujeto, negro = fondo. Su función es decir qué se ve.',
     'view.hint.rgba': 'Los 4 canales a la vez. Fíjate: en verde el canal G sale muy claro y el B más ruidoso.',
-    'drop.big': 'Carga una imagen para empezar',
+    'drop.big': 'Carga una imagen o vídeo para empezar',
     'drop.small': 'o pulsa «Demo» para ver un croma de ejemplo',
     'foot.credits': 'CIFP Tartanga LHII · Realización A/V',
     'pick.on': 'Cuentagotas activo — pulsa en la imagen',
   },
   eu: {
     subtitle: 'Kroma laborategia',
-    'src.title': 'Irudia',
-    'src.load': 'Kargatu irudia…',
+    'src.title': 'Iturria',
+    'src.load': 'Kargatu irudia edo bideoa…',
     'src.demo': 'Demo',
-    'src.hint': 'Arrastatu irudi bat hona. Dena lokala da: ezer ez da internetera igotzen.',
+    'src.hint': 'Arrastatu irudi edo bideo bat hona. Dena lokala da: ezer ez da internetera igotzen.',
+    'media.frozen': 'Fotograma izoztuaren modua: mugitu denbora-lerroa eta aukeratu markoa. Ez da jarraian erreproduzitzen.',
+    'media.badcodec': 'Bideo hau ezin da nabigatzailean deskodetu (ProRes edo HEVC?). Saiatu MP4 (H.264) edo WebM formatuarekin.',
     'key.title': 'Chroma key',
     'key.pick': 'Tanta-kontagailua',
     'key.tolerance': 'Tolerantzia',
@@ -50,17 +54,19 @@ const I18N = {
     'view.hint.original': 'Irudia bere horretan, key-rik gabe.',
     'view.hint.alpha': 'Mattea: zuria = subjektua, beltza = atzealdea. Zer ikusten den esaten du.',
     'view.hint.rgba': '4 kanalak batera. Begiratu: berdean G kanala oso argi ateratzen da eta B zaratatsuagoa.',
-    'drop.big': 'Kargatu irudi bat hasteko',
+    'drop.big': 'Kargatu irudi edo bideo bat hasteko',
     'drop.small': 'edo sakatu «Demo» adibide bat ikusteko',
     'foot.credits': 'CIFP Tartanga LHII · Ikus-entzunezko Errealizazioa',
     'pick.on': 'Tanta-kontagailua aktibo — sakatu irudian',
   },
   en: {
     subtitle: 'Chroma key lab',
-    'src.title': 'Image',
-    'src.load': 'Load image…',
+    'src.title': 'Source',
+    'src.load': 'Load image or video…',
     'src.demo': 'Demo',
-    'src.hint': 'Drop an image here. Everything is local: nothing is uploaded.',
+    'src.hint': 'Drop an image or video here. Everything is local: nothing is uploaded.',
+    'media.frozen': 'Frozen-frame mode: move the timeline and pick the frame. It does not play back.',
+    'media.badcodec': 'This video can’t be decoded in the browser (ProRes or HEVC?). Try MP4 (H.264) or WebM.',
     'key.title': 'Chroma key',
     'key.pick': 'Eyedropper',
     'key.tolerance': 'Tolerance',
@@ -74,7 +80,7 @@ const I18N = {
     'view.hint.original': 'The image as-is, no key.',
     'view.hint.alpha': 'The matte: white = subject, black = background. It decides what shows.',
     'view.hint.rgba': 'All 4 channels at once. Note: on green, the G channel is very bright and B is noisier.',
-    'drop.big': 'Load an image to start',
+    'drop.big': 'Load an image or video to start',
     'drop.small': 'or press “Demo” to see an example key',
     'foot.credits': 'CIFP Tartanga LHII · A/V Production',
     'pick.on': 'Eyedropper active — click on the image',
@@ -286,10 +292,84 @@ function setImageSource(source, w, h) {
   render();
 }
 
-function loadFromBlobOrFile(file) {
+function loadImageFile(file) {
+  teardownVideo();
   const img = new Image();
   img.onload = () => { setImageSource(img, img.naturalWidth, img.naturalHeight); URL.revokeObjectURL(img.src); };
   img.src = URL.createObjectURL(file);
+}
+
+/* --- vídeo local: modo fotograma congelado (sin play) --- */
+const video = document.createElement('video');
+video.muted = true;
+video.playsInline = true;
+video.preload = 'auto';
+let videoURL = null;
+const media = { isVideo: false, fps: 25, seeking: false, pending: null };
+
+function teardownVideo() {
+  media.isVideo = false;
+  $('transport').hidden = true;
+  $('frozenHint').hidden = true;
+  if (videoURL) { URL.revokeObjectURL(videoURL); videoURL = null; }
+}
+
+function drawVideoFrame() {
+  if (!video.videoWidth) return;
+  setImageSource(video, video.videoWidth, video.videoHeight);
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s - m * 60;
+  return m + ':' + sec.toFixed(2).padStart(5, '0');
+}
+
+function seekTo(tSec) {
+  const t = Math.max(0, Math.min(video.duration || 0, tSec));
+  if (media.seeking) { media.pending = t; return; }   // coalescer mientras se arrastra
+  media.seeking = true;
+  video.currentTime = t;
+}
+
+video.addEventListener('seeked', () => {
+  drawVideoFrame();
+  $('timeline').value = String(video.currentTime);
+  $('timecode').textContent = fmtTime(video.currentTime);
+  media.seeking = false;
+  if (media.pending != null) { const p = media.pending; media.pending = null; seekTo(p); }
+});
+
+video.addEventListener('error', () => {
+  if (!media.isVideo) return;
+  const dh = $('dropHint');
+  dh.hidden = false;
+  dh.innerHTML = '<p>' + t('media.badcodec') + '</p>';
+});
+
+function loadVideoFile(file) {
+  teardownVideo();
+  media.isVideo = true;
+  videoURL = URL.createObjectURL(file);
+  video.src = videoURL;
+  video.addEventListener('loadeddata', () => {
+    if (!video.videoWidth) return;   // el handler de 'error' avisa
+    $('timeline').min = '0';
+    $('timeline').max = String(video.duration || 0);
+    $('timeline').step = String(1 / media.fps);
+    $('timeline').value = '0';
+    $('transport').hidden = false;
+    $('frozenHint').hidden = false;
+    $('timecode').textContent = fmtTime(0);
+    drawVideoFrame();   // primer fotograma
+  }, { once: true });
+  video.load();
+}
+
+function loadFile(file) {
+  if (!file) return;
+  if (file.type.startsWith('video/')) loadVideoFile(file);
+  else if (file.type.startsWith('image/')) loadImageFile(file);
 }
 
 /* --- imagen demo generada: fondo verde desigual + sujeto --- */
@@ -330,6 +410,7 @@ function buildDemo() {
   return c;
 }
 function loadDemo() {
+  teardownVideo();
   const c = buildDemo();
   setImageSource(c, c.width, c.height);
   // color clave por defecto: muestrear el fondo (esquina)
@@ -358,10 +439,13 @@ function pickAt(ix, iy) {
 const $ = (id) => document.getElementById(id);
 
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
-$('fileInput').addEventListener('change', (e) => {
-  if (e.target.files[0]) loadFromBlobOrFile(e.target.files[0]);
-});
+$('fileInput').addEventListener('change', (e) => { loadFile(e.target.files[0]); });
 $('btnDemo').addEventListener('click', loadDemo);
+
+// timeline (scrub) + fotograma ±1
+$('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
+$('framePrev').addEventListener('click', () => seekTo(video.currentTime - 1 / media.fps));
+$('frameNext').addEventListener('click', () => seekTo(video.currentTime + 1 / media.fps));
 
 // drag & drop sobre el escenario
 const stage = $('stage');
@@ -369,10 +453,7 @@ const stage = $('stage');
   stage.addEventListener(ev, (e) => { e.preventDefault(); stage.classList.add('dragover'); }));
 ['dragleave', 'drop'].forEach((ev) =>
   stage.addEventListener(ev, (e) => { e.preventDefault(); stage.classList.remove('dragover'); }));
-stage.addEventListener('drop', (e) => {
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) loadFromBlobOrFile(f);
-});
+stage.addEventListener('drop', (e) => { loadFile(e.dataTransfer.files[0]); });
 
 // cuentagotas
 const wrap = $('canvasWrap');

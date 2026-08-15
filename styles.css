@@ -167,13 +167,45 @@ input[type="range"]::-moz-range-thumb {
 .stage {
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   padding: 24px;
   background:
     radial-gradient(1200px 600px at 50% -10%, #191c22, var(--bg));
   overflow: auto;
 }
+
+/* transporte / timeline (modo fotograma congelado) */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 720px;
+}
+.transport[hidden] { display: none; }
+.transport input[type="range"] { flex: 1; }
+.tbtn {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  width: 34px; height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tbtn:hover { border-color: var(--coral); color: var(--coral-2); }
+.tcode {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 62px;
+  text-align: right;
+}
+.frozen-hint { text-align: center; margin: 0; }
+.frozen-hint[hidden] { display: none; }
 .canvas-wrap {
   position: relative;
   max-width: 100%;

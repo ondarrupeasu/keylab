@@ -29,11 +29,11 @@
       <section class="group">
         <h2 data-i18n="src.title">Imagen</h2>
         <div class="row">
-          <button id="btnLoad" class="btn primary" data-i18n="src.load">Cargar imagen…</button>
+          <button id="btnLoad" class="btn primary" data-i18n="src.load">Cargar imagen o vídeo…</button>
           <button id="btnDemo" class="btn" data-i18n="src.demo">Demo</button>
         </div>
-        <input id="fileInput" type="file" accept="image/*" hidden />
-        <p class="hint" data-i18n="src.hint">Arrastra una imagen aquí. Todo es local: nada se sube a internet.</p>
+        <input id="fileInput" type="file" accept="image/*,video/*" hidden />
+        <p class="hint" data-i18n="src.hint">Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.</p>
       </section>
 
       <section class="group">
@@ -78,10 +78,18 @@
           <span class="gl-label" style="right:0;bottom:0">A</span>
         </div>
         <div class="drop-hint" id="dropHint">
-          <p data-i18n="drop.big">Carga una imagen para empezar</p>
+          <p data-i18n="drop.big">Carga una imagen o vídeo para empezar</p>
           <p class="small" data-i18n="drop.small">o pulsa «Demo» para ver un croma de ejemplo</p>
         </div>
       </div>
+
+      <div class="transport" id="transport" hidden>
+        <button id="framePrev" class="tbtn" title="Fotograma anterior">◄</button>
+        <input id="timeline" type="range" min="0" max="0" step="0.001" value="0" />
+        <button id="frameNext" class="tbtn" title="Fotograma siguiente">►</button>
+        <span class="tcode" id="timecode">0:00.00</span>
+      </div>
+      <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
     </section>
   </main>
 

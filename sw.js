@@ -1,6 +1,6 @@
 /* KeyLab service worker — cache básica para uso offline.
    Sube CACHE cuando cambien los assets para forzar actualización. */
-const CACHE = 'keylab-v1';
+const CACHE = 'keylab-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -22,17 +22,16 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// network-first para navegación; cache-first para el resto
+// network-first: intenta red (y refresca caché); si no hay red, tira de caché.
+// Así cada deploy se ve al instante y la app sigue funcionando offline.
 self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET') return;
   e.respondWith(
-    caches.match(request).then((cached) =>
-      cached || fetch(request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-        return res;
-      }).catch(() => cached)
-    )
+    fetch(request).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+      return res;
+    }).catch(() => caches.match(request))
   );
 });
