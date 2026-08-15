@@ -42,6 +42,7 @@ const I18N = {
     'bg.hint': 'El compuesto se ve sobre esta imagen; el light wrap envuelve sus colores en los bordes del sujeto (solo en vista Compuesto).',
     'matte.title': 'Garbage matte',
     'matte.draw': 'Dibujar',
+    'matte.finish': 'Terminar',
     'matte.clear': 'Borrar',
     'matte.invert': 'Invertir',
     'matte.hint': 'Pulsa «Dibujar» y haz clic para marcar un polígono alrededor del sujeto; lo de fuera se quita (o lo de dentro si inviertes).',
@@ -112,6 +113,7 @@ const I18N = {
     'bg.hint': 'Konposatua irudi honen gainean ikusten da; light wrap-ek bere koloreak subjektuaren ertzetan biltzen ditu (Konposatua ikuspegian soilik).',
     'matte.title': 'Garbage matte',
     'matte.draw': 'Marraztu',
+    'matte.finish': 'Amaitu',
     'matte.clear': 'Ezabatu',
     'matte.invert': 'Alderantzikatu',
     'matte.hint': 'Sakatu «Marraztu» eta egin klik subjektuaren inguruan poligono bat markatzeko; kanpokoa kentzen da (edo barrukoa alderantzikatzen baduzu).',
@@ -182,6 +184,7 @@ const I18N = {
     'bg.hint': 'The composite is shown over this image; light wrap wraps its colours onto the subject’s edges (Composite view only).',
     'matte.title': 'Garbage matte',
     'matte.draw': 'Draw',
+    'matte.finish': 'Finish',
     'matte.clear': 'Clear',
     'matte.invert': 'Invert',
     'matte.hint': 'Press “Draw” and click to mark a polygon around the subject; everything outside is removed (or inside, if you invert).',
@@ -234,6 +237,7 @@ function applyLang() {
   updateViewHint();
   updatePickLabel();
   updateExampleHint();
+  if (typeof updateMatteLabel === 'function') updateMatteLabel();
 }
 function t(key) { return (I18N[lang] || I18N.es)[key] || key; }
 function updateExampleHint() {
@@ -1199,8 +1203,9 @@ function resetAll() {
   // garbage matte + clean plate
   state.matte = { active: false, points: [], has: false, invert: false };
   state.plate = { has: false, use: false };
-  $('btnMatte').classList.remove('on'); $('btnMatteInvert').classList.remove('on');
+  $('btnMatteInvert').classList.remove('on');
   $('btnPlateClear').hidden = true; $('plateUseWrap').hidden = true;
+  updateMatteLabel();
   updateMatteTexture(); drawOverlay();
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
   document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
@@ -1239,20 +1244,50 @@ $('btnPick').addEventListener('click', () => {
   wrap.classList.toggle('picking', state.picking);
   updatePickLabel();
 });
+// cuentagotas (click); el garbage matte usa eventos de puntero (abajo)
 canvas.addEventListener('click', (e) => {
-  if (!state.hasImage) return;
+  if (!state.hasImage || state.matte.active || !state.picking) return;
   const r = canvas.getBoundingClientRect();
-  const nx = clamp01((e.clientX - r.left) / r.width);
-  const ny = clamp01((e.clientY - r.top) / r.height);
-  if (state.matte.active) {                    // añadir vértice al garbage matte
-    state.matte.points.push({ x: nx, y: ny });
-    updateMatteTexture(); drawOverlay(); render(); updateNodeMap();
-    return;
-  }
-  if (!state.picking) return;
-  pickAt(nx * canvas.width, ny * canvas.height);
+  pickAt(clamp01((e.clientX - r.left) / r.width) * canvas.width,
+         clamp01((e.clientY - r.top) / r.height) * canvas.height);
   setView(0);   // salta a Compuesto para ver el resultado del key
 });
+
+// garbage matte: clic para añadir vértice, arrastrar para recolocar
+let matteDrag = -1;
+function matteCoords(e) {
+  const r = canvas.getBoundingClientRect();
+  return { nx: clamp01((e.clientX - r.left) / r.width), ny: clamp01((e.clientY - r.top) / r.height), rw: r.width, rh: r.height };
+}
+function matteNearVertex(nx, ny, rw, rh) {
+  const thr = 18;
+  for (let i = 0; i < state.matte.points.length; i++) {
+    const p = state.matte.points[i];
+    const dx = (p.x - nx) * rw, dy = (p.y - ny) * rh;
+    if (dx * dx + dy * dy < thr * thr) return i;
+  }
+  return -1;
+}
+canvas.addEventListener('pointerdown', (e) => {
+  if (!state.matte.active || !state.hasImage) return;
+  e.preventDefault();
+  const { nx, ny, rw, rh } = matteCoords(e);
+  const idx = matteNearVertex(nx, ny, rw, rh);
+  if (idx >= 0) {
+    matteDrag = idx;                             // recolocar vértice existente
+  } else {
+    state.matte.points.push({ x: nx, y: ny });   // añadir nuevo
+    matteDrag = state.matte.points.length - 1;
+  }
+  updateMatteTexture(); drawOverlay(); render(); updateNodeMap();
+});
+window.addEventListener('pointermove', (e) => {
+  if (matteDrag < 0) return;
+  const { nx, ny } = matteCoords(e);
+  state.matte.points[matteDrag] = { x: nx, y: ny };
+  updateMatteTexture(); drawOverlay(); render();
+});
+window.addEventListener('pointerup', () => { matteDrag = -1; });
 function updatePickLabel() {
   $('btnPick').textContent = state.picking ? t('pick.on') : t('key.pick');
 }
@@ -1277,9 +1312,14 @@ $('bgInput').addEventListener('change', (e) => { loadBackgroundFile(e.target.fil
 $('btnBgClear').addEventListener('click', clearBackground);
 
 // garbage matte
+function updateMatteLabel() {
+  const b = $('btnMatte');
+  b.classList.toggle('on', state.matte.active);
+  b.textContent = state.matte.active ? t('matte.finish') : t('matte.draw');
+}
 $('btnMatte').addEventListener('click', () => {
   state.matte.active = !state.matte.active;
-  $('btnMatte').classList.toggle('on', state.matte.active);
+  updateMatteLabel();
   if (state.matte.active && state.picking) {   // sale del cuentagotas
     state.picking = false; $('btnPick').classList.remove('on'); updatePickLabel();
   }
