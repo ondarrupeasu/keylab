@@ -573,7 +573,7 @@ const state = {
   despill: 0.0,
   keyChan: 1,                 // verde por defecto
   mode: 0,
-  scope: 'off',
+  scopes: { histogram: false, waveform: false, parade: false, vectorscope: false },
   picking: false,
   hasBg: false,
   wrap: 0.0,
@@ -618,12 +618,28 @@ function updateKeyChan() {
   state.keyChan = (k[1] >= k[0] && k[1] >= k[2]) ? 1 : (k[2] >= k[0] ? 2 : 0);
 }
 
-// redibuja el scope activo sobre el fotograma actual
+// redibuja los scopes activos (varios a la vez) rellenando el hueco en rejilla
+const SCOPE_TYPES = ['histogram', 'waveform', 'parade', 'vectorscope'];
+let scopeCanvases = {};
 function updateScopes() {
-  const sc = $('scopes');
-  if (state.scope === 'off' || !state.hasImage) { sc.hidden = true; return; }
-  sc.hidden = false;
-  window.KeyLabScopes.draw(state.scope, srcCanvas, $('scopeCanvas'), state.key);
+  const box = $('scopes');
+  const active = SCOPE_TYPES.filter((t) => state.scopes[t]);
+  box.hidden = !state.hasImage || active.length === 0;
+  if (box.hidden) { box.innerHTML = ''; box.dataset.set = ''; scopeCanvases = {}; return; }
+  const setKey = active.join(',');
+  if (box.dataset.set !== setKey) {          // reconstruye el DOM solo si cambia el conjunto
+    box.dataset.set = setKey;
+    box.innerHTML = '';
+    box.style.gridTemplateColumns = 'repeat(' + Math.min(active.length, 2) + ', minmax(0,1fr))';
+    scopeCanvases = {};
+    for (const t of active) {
+      const cv = document.createElement('canvas');
+      cv.className = 'scope-canvas';
+      box.appendChild(cv);
+      scopeCanvases[t] = cv;
+    }
+  }
+  for (const t of active) window.KeyLabScopes.draw(t, srcCanvas, scopeCanvases[t], state.key);
 }
 
 // tamaño del canvas GL: 3× ancho en vista partida, imagen normal en el resto
@@ -1293,7 +1309,8 @@ function resetAll() {
   state.key = [0.0, 0.694, 0.251];
   state.tol = 0.12; state.soft = 0.10; state.despill = 0.0; state.keyChan = 1;
   state.wrap = 0.0; state.wrapRadius = 8.0;
-  state.mode = 0; state.scope = 'off'; state.picking = false;
+  state.mode = 0; state.picking = false;
+  state.scopes = { histogram: false, waveform: false, parade: false, vectorscope: false };
   demoHintKey = null;
   $('tolerance').value = '0.12'; $('tolOut').textContent = '0.120';
   $('softness').value = '0.10'; $('softOut').textContent = '0.100';
@@ -1310,7 +1327,8 @@ function resetAll() {
   updateMatteLabel();
   updateMatteTexture(); drawOverlay();
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
-  document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === 'off'));
+  document.querySelectorAll('.scope').forEach((x) => x.classList.remove('active'));
+  $('scopes').dataset.set = '';
   document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
   ['gridLabels', 'splitLabels', 'transport', 'frozenHint', 'webcamBar', 'scopes', 'scopeTabs', 'dock', 'btnBgClear'].forEach((id) => { $(id).hidden = true; });
   $('dropHint').hidden = false;
@@ -1517,8 +1535,9 @@ function updateViewHint() {
 // scopes
 document.querySelectorAll('.scope').forEach((b) => {
   b.addEventListener('click', () => {
-    state.scope = (state.scope === b.dataset.scope) ? 'off' : b.dataset.scope;   // toggle
-    document.querySelectorAll('.scope').forEach((x) => x.classList.toggle('active', x.dataset.scope === state.scope));
+    const s = b.dataset.scope;
+    state.scopes[s] = !state.scopes[s];                 // toggle independiente
+    b.classList.toggle('active', state.scopes[s]);
     updateScopes();
   });
 });
