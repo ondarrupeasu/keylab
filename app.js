@@ -337,6 +337,15 @@ function updateScopes() {
   window.KeyLabScopes.draw(state.scope, srcCanvas, $('scopeCanvas'), state.key);
 }
 
+// cambia la vista (0 compuesto, 1 original, 2 alpha, 3 rgba) y refleja la UI
+function setView(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', +x.dataset.mode === mode));
+  $('gridLabels').hidden = mode !== 3;
+  updateViewHint();
+  render();
+}
+
 function setImageSource(source, w, h) {
   // encajar dentro de MAX_DIM manteniendo aspecto
   let tw = w, th = h;
@@ -363,7 +372,11 @@ function setImageSource(source, w, h) {
 function loadImageFile(file) {
   teardownVideo();
   const img = new Image();
-  img.onload = () => { setImageSource(img, img.naturalWidth, img.naturalHeight); URL.revokeObjectURL(img.src); };
+  img.onload = () => {
+    setImageSource(img, img.naturalWidth, img.naturalHeight);
+    setView(1);   // arranca en Original: el alumno hace el key paso a paso
+    URL.revokeObjectURL(img.src);
+  };
   img.src = URL.createObjectURL(file);
 }
 
@@ -480,6 +493,7 @@ function loadVideoFile(file) {
     media.fpsDetected = null;
     applyFps();                     // paso inicial (auto=25 hasta detectar)
     drawVideoFrame();               // primer fotograma ya visible
+    setView(1);                     // arranca en Original: el key lo hacen ellos
     media.fpsDetected = await probeFps();   // intentar detectar fps reales
     applyFps();                     // aplica lo detectado si estamos en Auto
     seekTo(0);                      // volver al primer fotograma tras el sondeo
@@ -493,38 +507,126 @@ function loadFile(file) {
   else if (file.type.startsWith('image/')) loadImageFile(file);
 }
 
-/* --- imagen demo generada: fondo verde desigual + sujeto --- */
+/* --- imagen demo generada: croma verde realista (iluminación desigual,
+       pelo con mechones, algo de spill verde y ruido mayor en azul) --- */
 function buildDemo() {
-  const w = 960, h = 600;
+  const w = 1280, h = 720;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const x = c.getContext('2d');
+  const cx = w * 0.5;
 
-  // fondo verde con gradiente de iluminación (desigual, para enseñar)
-  const g = x.createRadialGradient(w * 0.35, h * 0.4, 40, w * 0.5, h * 0.5, w * 0.8);
-  g.addColorStop(0, '#12c24e');
-  g.addColorStop(1, '#059a3c');
-  x.fillStyle = g;
+  // --- fondo verde: base + hotspot de luz + viñeta (iluminación desigual) ---
+  x.fillStyle = '#0b9c3b';
   x.fillRect(0, 0, w, h);
+  let g = x.createRadialGradient(w * 0.40, h * 0.40, 50, w * 0.5, h * 0.55, w * 0.75);
+  g.addColorStop(0, 'rgba(70,220,120,0.85)');
+  g.addColorStop(1, 'rgba(0,120,55,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  let vig = x.createRadialGradient(cx, h * 0.5, h * 0.32, cx, h * 0.55, h * 0.9);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,25,8,0.55)');
+  x.fillStyle = vig; x.fillRect(0, 0, w, h);
 
-  // sujeto: cabeza + hombros (tonos no verdes)
-  x.fillStyle = '#c98e6b';                 // piel
-  x.beginPath(); x.ellipse(w / 2, h * 0.46, 78, 96, 0, 0, Math.PI * 2); x.fill();
-  x.fillStyle = '#3a2c25';                 // pelo
-  x.beginPath(); x.ellipse(w / 2, h * 0.34, 84, 62, 0, Math.PI, Math.PI * 2); x.fill();
-  x.fillStyle = '#2f5d86';                 // camiseta
+  // --- silueta del sujeto (cabeza + cuello + hombros) como Path2D reutilizable ---
+  const headCy = h * 0.42, headRx = 105, headRy = 132;
+  const body = new Path2D();
+  body.moveTo(cx - 300, h);
+  body.quadraticCurveTo(cx - 250, h * 0.66, cx - 95, h * 0.60);   // hombro izq
+  body.quadraticCurveTo(cx - 70, h * 0.55, cx - 60, h * 0.50);    // cuello izq
+  body.lineTo(cx + 60, h * 0.50);
+  body.quadraticCurveTo(cx + 70, h * 0.55, cx + 95, h * 0.60);    // cuello/hombro der
+  body.quadraticCurveTo(cx + 250, h * 0.66, cx + 300, h);
+  body.closePath();
+
+  // sombra de contacto suave sobre el "suelo"
+  x.save();
+  x.filter = 'blur(18px)';
+  x.fillStyle = 'rgba(0,40,15,0.35)';
+  x.beginPath(); x.ellipse(cx, h * 0.98, 260, 40, 0, 0, Math.PI * 2); x.fill();
+  x.restore();
+
+  // camiseta (con sombreado)
+  let shirt = x.createLinearGradient(0, h * 0.5, 0, h);
+  shirt.addColorStop(0, '#3a6f9c');
+  shirt.addColorStop(1, '#22405c');
+  x.fillStyle = shirt; x.fill(body);
+
+  // cuello
+  x.fillStyle = '#b07a58';
+  x.fillRect(cx - 42, h * 0.40, 84, h * 0.14);
+
+  // pelo (masa por detrás, borde irregular)
+  x.fillStyle = '#241a15';
   x.beginPath();
-  x.moveTo(w / 2 - 150, h);
-  x.quadraticCurveTo(w / 2, h * 0.62, w / 2 + 150, h);
+  x.ellipse(cx, headCy - 18, headRx + 20, headRy + 6, 0, 0, Math.PI * 2);
+  x.fill();
+
+  // cabeza con sombreado de piel
+  let skin = x.createRadialGradient(cx - 34, headCy - 34, 20, cx, headCy, headRy);
+  skin.addColorStop(0, '#e0ad86');
+  skin.addColorStop(1, '#b3805e');
+  x.fillStyle = skin;
+  x.beginPath(); x.ellipse(cx, headCy, headRx, headRy, 0, 0, Math.PI * 2); x.fill();
+
+  // rasgos mínimos (para que parezca sujeto, no una mancha)
+  x.fillStyle = 'rgba(60,40,30,0.55)';
+  x.beginPath(); x.ellipse(cx - 42, headCy - 12, 10, 6, 0, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(cx + 42, headCy - 12, 10, 6, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(120,70,55,0.5)'; x.lineWidth = 4;
+  x.beginPath(); x.moveTo(cx - 18, headCy + 44); x.quadraticCurveTo(cx, headCy + 54, cx + 18, headCy + 44); x.stroke();
+
+  // flequillo/pelo por delante (parte superior de la cabeza)
+  x.fillStyle = '#2b201a';
+  x.beginPath();
+  x.moveTo(cx - headRx, headCy - 6);
+  x.quadraticCurveTo(cx - headRx * 0.5, headCy - headRy * 1.05, cx, headCy - headRy * 0.86);
+  x.quadraticCurveTo(cx + headRx * 0.5, headCy - headRy * 1.05, cx + headRx, headCy - 6);
+  x.quadraticCurveTo(cx, headCy - headRy * 0.55, cx - headRx, headCy - 6);
   x.closePath(); x.fill();
 
-  // ruido: más fuerte en el canal AZUL (lección G vs B)
+  // mechones sueltos (el reto clásico del alpha): pelillos finos hacia el fondo
+  x.strokeStyle = 'rgba(30,22,17,0.8)';
+  x.lineWidth = 1.4;
+  for (let i = 0; i < 60; i++) {
+    const ang = Math.PI + (i / 59) * Math.PI;              // semicírculo superior
+    const ox = cx + Math.cos(ang) * (headRx + 8);
+    const oy = headCy - 22 + Math.sin(ang) * (headRy - 10);
+    const len = 14 + Math.random() * 34;
+    const drift = (Math.random() - 0.5) * 26;
+    x.globalAlpha = 0.5 + Math.random() * 0.4;
+    x.beginPath();
+    x.moveTo(ox, oy);
+    x.quadraticCurveTo(ox + drift * 0.5, oy - len * 0.6, ox + drift, oy - len);
+    x.stroke();
+  }
+  x.globalAlpha = 1;
+
+  // --- spill verde en los bordes del sujeto (para practicar despill) ---
+  x.save();
+  x.clip(body);
+  let spill = x.createLinearGradient(cx - 300, 0, cx + 300, 0);
+  spill.addColorStop(0.00, 'rgba(60,200,90,0.55)');
+  spill.addColorStop(0.18, 'rgba(60,200,90,0)');
+  spill.addColorStop(0.82, 'rgba(60,200,90,0)');
+  spill.addColorStop(1.00, 'rgba(60,200,90,0.55)');
+  x.globalCompositeOperation = 'lighter';
+  x.fillStyle = spill; x.fill(body);
+  x.restore();
+  // rim verde tenue alrededor de la cabeza
+  x.save();
+  x.globalCompositeOperation = 'lighter';
+  x.strokeStyle = 'rgba(70,210,110,0.35)'; x.lineWidth = 6;
+  x.beginPath(); x.ellipse(cx, headCy, headRx, headRy, 0, 0, Math.PI * 2); x.stroke();
+  x.restore();
+
+  // --- ruido: más fuerte en AZUL (lección G vs B) ---
   const id = x.getImageData(0, 0, w, h);
   const d = id.data;
   for (let i = 0; i < d.length; i += 4) {
-    d[i]     += (Math.random() - 0.5) * 8;    // R poco
-    d[i + 1] += (Math.random() - 0.5) * 8;    // G poco
-    d[i + 2] += (Math.random() - 0.5) * 34;   // B mucho ruido
+    d[i]     += (Math.random() - 0.5) * 7;    // R poco
+    d[i + 1] += (Math.random() - 0.5) * 7;    // G poco
+    d[i + 2] += (Math.random() - 0.5) * 32;   // B mucho ruido
   }
   x.putImageData(id, 0, 0);
 
@@ -534,8 +636,10 @@ function loadDemo() {
   teardownVideo();
   const c = buildDemo();
   setImageSource(c, c.width, c.height);
-  // color clave por defecto: muestrear el fondo (esquina)
-  pickAt(6, 6);
+  // deja preparado un color clave del verde BIEN iluminado (no la viñeta oscura),
+  // pero SIN aplicar el key: arranca en Original para que lo hagan paso a paso.
+  pickAt(Math.round(c.width * 0.24), Math.round(c.height * 0.28));
+  setView(1);
 }
 
 /* ------------------------------------------------------------------ */
@@ -635,14 +739,7 @@ $('softness').addEventListener('input', (e) => {
 
 // vistas
 document.querySelectorAll('.view').forEach((b) => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.view').forEach((x) => x.classList.remove('active'));
-    b.classList.add('active');
-    state.mode = parseInt(b.dataset.mode, 10);
-    $('gridLabels').hidden = state.mode !== 3;
-    updateViewHint();
-    render();
-  });
+  b.addEventListener('click', () => setView(parseInt(b.dataset.mode, 10)));
 });
 function updateViewHint() {
   const keys = ['view.hint.composite', 'view.hint.original', 'view.hint.alpha', 'view.hint.rgba'];
