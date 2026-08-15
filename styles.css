@@ -232,22 +232,26 @@ input[type="range"]::-moz-range-thumb {
 }
 .dock[hidden] { display: none; }
 .dock-left { flex: 1 1 42%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.dock-right { flex: 1 1 58%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+/* dock-right con altura fija: el hueco del scope está SIEMPRE reservado,
+   así activar/desactivar un scope no readapta ni encoge el vídeo */
+.dock-right { flex: 1 1 58%; min-width: 0; display: flex; flex-direction: column; gap: 8px; height: 184px; }
 .dock-title {
   align-self: flex-start;
   font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
   color: var(--muted); font-weight: 700;
 }
-.scopes { width: 100%; margin: 0; }
+.scopes { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .scopes[hidden] { display: none; }
 #scopeCanvas {
-  width: 100%; height: auto;
+  flex: 1 1 auto; min-height: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
   display: block;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #0c0e12;
 }
-.scopes .hint { margin: 6px 0 0; }
+.scopes .hint { flex: 0 0 auto; margin: 0; }
 /* viewport flexible: el vídeo ocupa el espacio disponible arriba */
 .viewport {
   flex: 1 1 auto; min-height: 0; width: 100%;
