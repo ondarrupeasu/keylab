@@ -220,11 +220,9 @@ input[type="range"]::-moz-range-thumb {
 .frozen-hint[hidden] { display: none; }
 
 /* dock inferior: pipeline (izq) + scopes (der) */
-/* botones de scope: en el hueco bajo el vídeo */
+/* botones de scope: a la derecha, a la altura de los controles de vídeo */
 .scope-tabs {
-  flex: 0 0 auto;
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-  width: 100%; max-width: 620px;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px;
 }
 .scope-tabs[hidden] { display: none; }
 
@@ -234,7 +232,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .dock[hidden] { display: none; }
 .dock-left { flex: 1 1 42%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.dock-right { flex: 1 1 58%; min-width: 0; }
+.dock-right { flex: 1 1 58%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .dock-title {
   align-self: flex-start;
   font-size: 11px; text-transform: uppercase; letter-spacing: .8px;

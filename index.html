@@ -115,9 +115,9 @@
       <section class="group">
         <h2 data-i18n="view.title">Vista</h2>
         <div class="views">
-          <button class="view active" data-mode="0" data-i18n="view.composite">Compuesto</button>
           <button class="view" data-mode="1" data-i18n="view.original">Original</button>
           <button class="view" data-mode="2" data-i18n="view.alpha">Alpha</button>
+          <button class="view active" data-mode="0" data-i18n="view.composite">Compuesto</button>
           <button class="view" data-mode="3" data-i18n="view.rgba">Canales RGBA</button>
           <button class="view" data-mode="4" data-i18n="view.split">Partida</button>
         </div>
@@ -150,13 +150,6 @@
       </div>
       </div>
 
-      <div class="scope-tabs" id="scopeTabs" hidden>
-        <button class="scope" data-scope="histogram" data-i18n="scope.hist">Histograma</button>
-        <button class="scope" data-scope="waveform" data-i18n="scope.wave">Waveform</button>
-        <button class="scope" data-scope="parade" data-i18n="scope.parade">Parade</button>
-        <button class="scope" data-scope="vectorscope" data-i18n="scope.vector">Vectorscopio</button>
-      </div>
-
       <div class="dock" id="dock" hidden>
         <div class="dock-left">
           <div class="transport" id="transport" hidden>
@@ -187,6 +180,12 @@
           <div class="nodemap" id="nodemap"></div>
         </div>
         <div class="dock-right">
+          <div class="scope-tabs" id="scopeTabs" hidden>
+            <button class="scope" data-scope="histogram" data-i18n="scope.hist">Histograma</button>
+            <button class="scope" data-scope="waveform" data-i18n="scope.wave">Waveform</button>
+            <button class="scope" data-scope="parade" data-i18n="scope.parade">Parade</button>
+            <button class="scope" data-scope="vectorscope" data-i18n="scope.vector">Vectorscopio</button>
+          </div>
           <div class="scopes" id="scopes" hidden>
             <canvas id="scopeCanvas"></canvas>
             <p class="hint" id="scopeHint" data-i18n="scope.hint">En el vectorscopio, el aro coral marca dónde cae el color de croma.</p>
