@@ -63,6 +63,10 @@ const I18N = {
     'scope.parade': 'Parade',
     'scope.vector': 'Vectorscopio',
     'scope.hint': 'En el vectorscopio, el aro coral marca dónde cae el color de croma.',
+    'scope.tip.histogram': 'Histograma de luminancia (blanco).',
+    'scope.tip.waveform': 'Waveform RGB: brillo por columnas.',
+    'scope.tip.parade': 'RGB parade: R, G y B por separado.',
+    'scope.tip.vectorscope': 'Vectorscopio: el aro coral marca el color de croma.',
     'key.title': 'Chroma key',
     'key.pick': 'Cuentagotas',
     'key.tolerance': 'Tolerancia',
@@ -140,6 +144,10 @@ const I18N = {
     'scope.parade': 'Parade',
     'scope.vector': 'Bektorroskopioa',
     'scope.hint': 'Bektorroskopioan, koral eraztunak kroma-kolorea non erortzen den markatzen du.',
+    'scope.tip.histogram': 'Luminantzia-histograma (zuria).',
+    'scope.tip.waveform': 'RGB waveform: distira zutabeka.',
+    'scope.tip.parade': 'RGB parade: R, G eta B bereizita.',
+    'scope.tip.vectorscope': 'Bektorroskopioa: koral eraztunak kroma-kolorea markatzen du.',
     'key.title': 'Chroma key',
     'key.pick': 'Tanta-kontagailua',
     'key.tolerance': 'Tolerantzia',
@@ -217,6 +225,10 @@ const I18N = {
     'scope.parade': 'Parade',
     'scope.vector': 'Vectorscope',
     'scope.hint': 'On the vectorscope, the coral ring marks where the chroma colour falls.',
+    'scope.tip.histogram': 'Luminance histogram (white).',
+    'scope.tip.waveform': 'RGB waveform: brightness per column.',
+    'scope.tip.parade': 'RGB parade: R, G and B separately.',
+    'scope.tip.vectorscope': 'Vectorscope: the coral ring marks the screen colour.',
     'key.title': 'Chroma key',
     'key.pick': 'Eyedropper',
     'key.tolerance': 'Tolerance',
@@ -294,6 +306,7 @@ function applyLang() {
   updateExampleHint();
   if (typeof updateMatteLabel === 'function') updateMatteLabel();
   if (!document.getElementById('helpModal').hidden) renderHelp();
+  document.querySelectorAll('.scope').forEach((b) => { b.title = t('scope.tip.' + b.dataset.scope); });
 }
 function t(key) { return (I18N[lang] || I18N.es)[key] || key; }
 function updateExampleHint() {

@@ -40,51 +40,40 @@
     ctx.fillRect(0, 0, w, h);
   }
 
-  /* -------- Histograma -------- */
+  /* -------- Histograma (luminancia, blanco) -------- */
   function histogram(ctx, img, w, h) {
     const d = img.data, step = stepFor(img.width, img.height);
-    const R = new Float32Array(256), G = new Float32Array(256), B = new Float32Array(256);
+    const L = new Float32Array(256);
     for (let p = 0; p < d.length; p += 4 * step) {
-      R[d[p]]++; G[d[p + 1]]++; B[d[p + 2]]++;
+      L[Math.min(255, luma(d[p], d[p + 1], d[p + 2]) | 0)]++;
     }
     let max = 0;
-    for (let i = 0; i < 256; i++) max = Math.max(max, R[i], G[i], B[i]);
+    for (let i = 0; i < 256; i++) if (L[i] > max) max = L[i];
     if (max <= 0) max = 1;
     clearBg(ctx, w, h);
-    // rejilla
     ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) { const x = (i / 4) * w; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-    const chans = [[R, '255,80,80'], [G, '80,220,120'], [B, '90,150,255']];
-    ctx.globalCompositeOperation = 'lighter';
-    for (const [buf, col] of chans) {
-      ctx.beginPath();
-      ctx.moveTo(0, h);
-      for (let i = 0; i < 256; i++) {
-        const x = (i / 255) * w;
-        const y = h - (buf[i] / max) * (h - 4);
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(w, h); ctx.closePath();
-      ctx.fillStyle = 'rgba(' + col + ',.5)'; ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let i = 0; i < 256; i++) { const x = (i / 255) * w; const y = h - (L[i] / max) * (h - 4); ctx.lineTo(x, y); }
+    ctx.lineTo(w, h); ctx.closePath();
+    ctx.fillStyle = 'rgba(232,236,241,.85)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.stroke();
   }
 
-  /* -------- Waveform (luma) -------- */
+  /* -------- Waveform (RGB) -------- */
   function waveform(ctx, img, w, h) {
     const d = img.data, iw = img.width, ih = img.height, step = stepFor(iw, ih);
-    const buf = new Float32Array(w * h);
+    const R = new Float32Array(w * h), G = new Float32Array(w * h), B = new Float32Array(w * h);
     for (let y = 0; y < ih; y += step) {
       for (let x = 0; x < iw; x += step) {
         const p = (y * iw + x) * 4;
-        const L = luma(d[p], d[p + 1], d[p + 2]) / 255;
         const sx = Math.min(w - 1, (x / iw) * w) | 0;
-        const sy = Math.min(h - 1, h - 1 - L * (h - 1)) | 0;
-        buf[sy * w + sx] += 1;
+        plot(R, w, h, sx, d[p]); plot(G, w, h, sx, d[p + 1]); plot(B, w, h, sx, d[p + 2]);
       }
     }
     clearBg(ctx, w, h);
-    paintOver(ctx, w, h, [buf], [[180, 230, 200]]);
+    paintOver(ctx, w, h, [R, G, B], [[255, 70, 70], [70, 220, 110], [90, 150, 255]]);
     graticuleRows(ctx, w, h);
   }
 
@@ -169,14 +158,16 @@
     W, H,
     draw(type, srcCanvas, scopeCanvas, key) {
       if (!srcCanvas.width) return;
-      scopeCanvas.width = W; scopeCanvas.height = H;
+      const cw = (type === 'vectorscope') ? 300 : 480;   // vectorscopio cuadrado; resto 2:1
+      const ch = (type === 'vectorscope') ? 300 : 240;
+      scopeCanvas.width = cw; scopeCanvas.height = ch;
       const ctx = scopeCanvas.getContext('2d');
       const img = srcCanvas.getContext('2d', { willReadFrequently: true })
         .getImageData(0, 0, srcCanvas.width, srcCanvas.height);
-      if (type === 'histogram') histogram(ctx, img, W, H);
-      else if (type === 'waveform') waveform(ctx, img, W, H);
-      else if (type === 'parade') parade(ctx, img, W, H);
-      else if (type === 'vectorscope') vectorscope(ctx, img, W, H, key);
+      if (type === 'histogram') histogram(ctx, img, cw, ch);
+      else if (type === 'waveform') waveform(ctx, img, cw, ch);
+      else if (type === 'parade') parade(ctx, img, cw, ch);
+      else if (type === 'vectorscope') vectorscope(ctx, img, cw, ch, key);
     },
   };
 
