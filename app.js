@@ -22,7 +22,7 @@ const I18N = {
     'ex.hint.shadow': 'El sujeto proyecta sombra sobre el fondo: el borde se ensucia y cuesta separarlo.',
     'ex.hint.noise': 'Fondo con poca luz y ruidoso (sobre todo en azul): el alpha sale con "nieve" en los bordes.',
     'ex.hint.spill': 'Mucho verde rebotado en el sujeto: mira cómo el despill limpia el tinte de los bordes.',
-    'ex.hint.blue': 'El mismo maniquí sobre croma azul: coge el azul con el cuentagotas. El key funciona igual; el canal ruidoso ahora es otro.',
+    'ex.hint.blue': 'La misma imagen sobre croma azul: coge el azul con el cuentagotas. El key funciona igual; ahora el canal ruidoso es otro.',
     'src.title': 'Fuente',
     'src.load': 'Cargar imagen o vídeo…',
     'src.demo': 'Demo',
@@ -88,7 +88,7 @@ const I18N = {
     'ex.hint.shadow': 'Subjektuak itzala egiten du atzealdean: ertza zikintzen da eta zaila da bereiztea.',
     'ex.hint.noise': 'Atzealde ilun eta zaratatsua (batez ere urdinean): alpha "elurtsu" ateratzen da ertzetan.',
     'ex.hint.spill': 'Berde asko islatuta subjektuan: ikusi nola despill-ak ertzetako tindua garbitzen duen.',
-    'ex.hint.blue': 'Maniki bera kroma urdinean: hartu urdina tanta-kontagailuarekin. Key-ak berdin funtzionatzen du; kanal zaratatsua orain bestea da.',
+    'ex.hint.blue': 'Irudi bera kroma urdinean: hartu urdina tanta-kontagailuarekin. Key-ak berdin funtzionatzen du; kanal zaratatsua orain bestea da.',
     'src.title': 'Iturria',
     'src.load': 'Kargatu irudia edo bideoa…',
     'src.demo': 'Demo',
@@ -154,7 +154,7 @@ const I18N = {
     'ex.hint.shadow': 'The subject casts a shadow on the screen: the edge gets dirty and hard to separate.',
     'ex.hint.noise': 'Low-light, noisy screen (mostly in blue): the alpha comes out with edge “snow”.',
     'ex.hint.spill': 'Lots of bounced green on the subject: watch despill clean the edge tint.',
-    'ex.hint.blue': 'Same mannequin on a blue screen: pick the blue with the eyedropper. The key works the same; the noisy channel is now a different one.',
+    'ex.hint.blue': 'Same image on a blue screen: pick the blue with the eyedropper. The key works the same; the noisy channel is now a different one.',
     'src.title': 'Source',
     'src.load': 'Load image or video…',
     'src.demo': 'Demo',
@@ -802,13 +802,14 @@ function buildScene(opts = {}) {
     dk.addColorStop(0.55, 'rgba(0,0,0,0)');
     x.fillStyle = dk; x.fillRect(0, 0, w, h);
   } else {
-    const g = x.createRadialGradient(w * 0.40, h * 0.40, 50, w * 0.5, h * 0.55, w * 0.75);
-    g.addColorStop(0, blue ? 'rgba(80,150,255,0.7)' : 'rgba(70,220,120,0.85)');
+    // "good": croma uniforme, sin fogonazos. Falloff muy leve y amplio.
+    const g = x.createRadialGradient(cx, h * 0.46, h * 0.2, cx, h * 0.5, h * 1.1);
+    g.addColorStop(0, blue ? 'rgba(60,120,220,0.10)' : 'rgba(55,190,105,0.10)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     x.fillStyle = g; x.fillRect(0, 0, w, h);
-    const vig = x.createRadialGradient(cx, h * 0.5, h * 0.32, cx, h * 0.55, h * 0.9);
+    const vig = x.createRadialGradient(cx, h * 0.5, h * 0.45, cx, h * 0.5, h * 0.95);
     vig.addColorStop(0, 'rgba(0,0,0,0)');
-    vig.addColorStop(1, blue ? 'rgba(0,6,25,0.55)' : 'rgba(0,25,8,0.55)');
+    vig.addColorStop(1, blue ? 'rgba(0,6,25,0.18)' : 'rgba(0,25,8,0.18)');
     x.fillStyle = vig; x.fillRect(0, 0, w, h);
   }
   if (cfg.wrinkles) {           // pliegues de tela mal estirada
@@ -939,17 +940,78 @@ function buildScene(opts = {}) {
   x.putImageData(id, 0, 0);
   return c;
 }
+/* Demo basada en una foto REAL de croma (modelo sobre verde, CC BY 2.0,
+   PictureYouth — ver README). Los ejemplos aplican defectos sobre esa foto.
+   Si la foto no carga, se usa el maniquí procedimental como fallback. */
+let demoImg = null, demoState = 'none';   // 'none' | 'ok' | 'error'
+function ensureDemoImg(cb) {
+  if (demoState === 'ok' || demoState === 'error') { cb(); return; }
+  demoImg = new Image();
+  demoImg.onload = () => { demoState = 'ok'; cb(); };
+  demoImg.onerror = () => { demoState = 'error'; cb(); };
+  demoImg.src = 'demo.jpg';
+}
+
+// aplica defectos de croma malo sobre la foto real (opts como en buildScene)
+function applyDefects(x, w, h, cfg) {
+  if (cfg.lighting === 'uneven') {           // un lado infraexpuesto
+    const gr = x.createLinearGradient(0, 0, w, 0);
+    gr.addColorStop(0, 'rgba(0,15,6,0.7)');
+    gr.addColorStop(0.55, 'rgba(0,0,0,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  }
+  if (cfg.shadow) {                           // sombra dura en el fondo
+    x.save(); x.filter = 'blur(24px)';
+    x.fillStyle = 'rgba(0,20,8,0.6)';
+    x.beginPath(); x.ellipse(w * 0.24, h * 0.52, w * 0.16, h * 0.34, 0.2, 0, Math.PI * 2); x.fill();
+    x.restore();
+  }
+  if (cfg.spill > 0.7) {                      // tinte verde general (mucho rebote)
+    x.fillStyle = 'rgba(60,200,90,0.16)'; x.fillRect(0, 0, w, h);
+  }
+  // pasada de píxeles: recolor a azul y/o ruido
+  const toBlue = cfg.screen === 'blue';
+  const n = cfg.noise || 0;
+  if (toBlue || n > 4) {
+    const id = x.getImageData(0, 0, w, h), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      if (toBlue && g > 85 && g > r * 1.2 && g > b * 1.15) {   // fondo verde -> azul
+        d[i] = r * 0.35; d[i + 1] = g * 0.4; d[i + 2] = Math.min(255, 110 + g * 0.55);
+      }
+      if (n > 4) {
+        d[i]     += (Math.random() - 0.5) * (n * 0.4);
+        d[i + 1] += (Math.random() - 0.5) * (n * 0.5);
+        d[i + 2] += (Math.random() - 0.5) * (toBlue ? n * 0.5 : n * 4.0);
+      }
+    }
+    x.putImageData(id, 0, 0);
+  }
+}
+
+function buildDemoCanvas(opts) {
+  if (demoState !== 'ok' || !demoImg.naturalWidth) return buildScene(opts);  // fallback maniquí
+  const iw = demoImg.naturalWidth, ih = demoImg.naturalHeight;
+  const c = document.createElement('canvas'); c.width = iw; c.height = ih;
+  const x = c.getContext('2d');
+  x.drawImage(demoImg, 0, 0);
+  applyDefects(x, iw, ih, Object.assign({ noise: 0, spill: 0, screen: 'green' }, opts));
+  return c;
+}
+
 function loadScene(opts, hintKey) {
   teardownVideo();
   if (state.webcam) stopWebcam();
-  const c = buildScene(opts);
-  setImageSource(c, c.width, c.height);
-  demoHintKey = hintKey || null;
-  updateExampleHint();
-  // color clave preparado desde el croma (arriba, centro), pero SIN aplicar:
-  // arranca en Original para que lo hagan paso a paso.
-  pickAt(Math.round(c.width * 0.5), Math.round(c.height * 0.06));
-  setView(1);
+  ensureDemoImg(() => {
+    const c = buildDemoCanvas(opts);
+    setImageSource(c, c.width, c.height);
+    demoHintKey = hintKey || null;
+    updateExampleHint();
+    // color clave del croma (esquina superior derecha = fondo), pero SIN aplicar:
+    // arranca en Original para que lo hagan paso a paso.
+    pickAt(Math.round(c.width * 0.94), Math.round(c.height * 0.05));
+    setView(1);
+  });
 }
 function loadDemo() { loadScene({}, null); }
 
