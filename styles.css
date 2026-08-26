@@ -42,7 +42,8 @@ body {
   border-bottom: 1px solid var(--line);
   background: var(--bg-2);
 }
-.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo-mark { border-radius: 8px; display: block; flex: 0 0 auto; }
 .logo {
   font-weight: 800;
   font-size: 20px;
