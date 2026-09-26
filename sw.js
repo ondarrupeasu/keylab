@@ -1,13 +1,14 @@
 /* KeyLab service worker — cache básica para uso offline.
    Sube CACHE cuando cambien los assets para forzar actualización. */
-const CACHE = 'keylab-v10';
+const CACHE = 'keylab-v11';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=11',
-  './app.js?v=11',
-  './scopes.js?v=11',
-  './report.js?v=11',
+  './casa-estilo.css?v=11',
+  './styles.css?v=12',
+  './app.js?v=12',
+  './scopes.js?v=12',
+  './report.js?v=12',
   './manifest.webmanifest',
   './icon.svg',
   './demo.jpg',

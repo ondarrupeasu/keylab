@@ -775,14 +775,14 @@ function drawOverlay() {
   const pts = state.matte.points;
   if (!pts.length) return;
   octx.lineWidth = Math.max(2, w / 400);
-  octx.strokeStyle = '#ff7a66';
+  octx.strokeStyle = '#ff5a4d';
   octx.fillStyle = 'rgba(255,122,102,0.15)';
   octx.beginPath();
   octx.moveTo(pts[0].x * w, pts[0].y * h);
   for (let i = 1; i < pts.length; i++) octx.lineTo(pts[i].x * w, pts[i].y * h);
   if (pts.length >= 3) { octx.closePath(); octx.fill(); }
   octx.stroke();
-  octx.fillStyle = '#ff7a66';
+  octx.fillStyle = '#ff5a4d';
   const rp = Math.max(3, w / 200);
   for (const p of pts) { octx.beginPath(); octx.arc(p.x * w, p.y * h, rp, 0, Math.PI * 2); octx.fill(); }
 }

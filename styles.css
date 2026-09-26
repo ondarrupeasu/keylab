@@ -1,14 +1,11 @@
+/* Tokens de la familia: casa-estilo.css (compartido). Aquí solo alias a los
+   nombres que ya usa KeyLab, para retintar sin tocar el resto del CSS. */
 :root {
-  --bg: #14161a;
-  --bg-2: #1b1e24;
-  --panel: #1e2229;
-  --line: #2c313b;
-  --text: #e9ecf1;
-  --muted: #98a0ad;
-  --coral: #ff7a66;
-  --coral-2: #ff9484;
-  --coral-dim: rgba(255, 122, 102, 0.14);
-  --radius: 10px;
+  --bg-2: var(--panel);
+  --coral: var(--accent);
+  --coral-2: var(--accent-hi);
+  --coral-dim: var(--accent-wash);
+  --radius: var(--r-lg);
 }
 
 * { box-sizing: border-box; }

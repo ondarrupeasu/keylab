@@ -133,7 +133,7 @@
       const cb = -0.168736 * key[0] - 0.331264 * key[1] + 0.5 * key[2];
       const cr = 0.5 * key[0] - 0.418688 * key[1] - 0.081312 * key[2];
       const kx = cx + cb * SCALE, ky = cy - cr * SCALE;
-      ctx.strokeStyle = '#ff7a66'; ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ff5a4d'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(kx, ky, 7, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(kx, ky); ctx.stroke();
     }
