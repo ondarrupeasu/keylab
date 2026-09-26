@@ -1337,7 +1337,7 @@ function resetAll() {
   $('wrapRadius').value = '8'; $('wrapRadiusOut').textContent = '8';
   document.querySelectorAll('input[type="range"]').forEach(sliderFill);
   $('keyColor').value = '#00b140'; $('keySwatch').style.background = '#00b140';
-  $('btnPick').classList.remove('on'); $('canvasWrap').classList.remove('picking');
+  $('btnPick').classList.remove('ce-on'); $('canvasWrap').classList.remove('picking');
   // garbage matte + clean plate
   state.matte = { active: false, points: [], has: false, invert: false };
   state.plate = { has: false, use: false };
@@ -1423,7 +1423,7 @@ stage.addEventListener('drop', (e) => { loadFile(e.dataTransfer.files[0]); });
 const wrap = $('canvasWrap');
 $('btnPick').addEventListener('click', () => {
   state.picking = !state.picking;
-  $('btnPick').classList.toggle('on', state.picking);
+  $('btnPick').classList.toggle('ce-on', state.picking);
   wrap.classList.toggle('picking', state.picking);
   updatePickLabel();
 });
@@ -1504,7 +1504,7 @@ $('btnMatte').addEventListener('click', () => {
   state.matte.active = !state.matte.active;
   updateMatteLabel();
   if (state.matte.active && state.picking) {   // sale del cuentagotas
-    state.picking = false; $('btnPick').classList.remove('on'); updatePickLabel();
+    state.picking = false; $('btnPick').classList.remove('ce-on'); updatePickLabel();
   }
   wrap.classList.toggle('picking', state.matte.active || state.picking);
 });

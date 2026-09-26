@@ -14,6 +14,11 @@
      a) IMPORTAR y usar las clases .ce-* directamente (copiar+revestir).
      b) Solo ALINEAR tus tokens a estos valores manteniendo tus nombres (lo que
         hizo DMX cuando ya tenía sus propias clases).
+   Apps de TOKENS / React con estilos inline (p.ej. AVHandbook): este `:root{--ce-*}`
+   ES la fuente única de la paleta. No copies los hex a mano (derivan) — o usa
+   `var(--ce-accent)` en el style inline (React lo admite), o léelos una vez con
+   `getComputedStyle(document.documentElement).getPropertyValue('--ce-accent')`
+   tras cargar esta hoja, y arma tu objeto de tokens desde ahí.
 
    REGLA: el coral es ACENTO, no protagonista. Fondo/estructura en oscuro frío;
    el coral marca la acción, el foco, lo LIVE.
@@ -67,6 +72,21 @@
 .ce-btn.ce-ghost:hover{color:var(--ce-text);}
 .ce-btn.ce-disabled,.ce-btn:disabled{background:var(--ce-panel);color:var(--ce-muted2);
   border-color:var(--ce-line-soft);cursor:not-allowed;pointer-events:none}
+/* Botón de SOLO icono, cuadrado (barras de herramientas: cuentagotas, ajustes…). Sugerido por KeyLab. */
+.ce-icon-btn{width:34px;height:34px;padding:0;border-radius:var(--ce-r);border:1px solid var(--ce-line);
+  background:var(--ce-card);color:var(--ce-text);cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;transition:border-color .16s,background .16s,color .16s}
+.ce-icon-btn svg{width:16px;height:16px}
+.ce-icon-btn:hover{border-color:var(--ce-accent);color:var(--ce-accent)}
+.ce-icon-btn.ce-on{border-color:var(--ce-accent);color:var(--ce-accent);background:var(--ce-accent-wash)}
+.ce-icon-btn:disabled{color:var(--ce-muted2);border-color:var(--ce-line-soft);cursor:not-allowed;pointer-events:none}
+/* Utilidad de tamaño para un SVG de trazo inline (pega el icono de lucide.dev con
+   stroke="currentColor" y ponle .ce-ico). No metemos los paths en el CSS (no se puede);
+   esto solo estandariza el tamaño/alineación. */
+.ce-ico{width:16px;height:16px;flex:none}
+.ce-ico-sm{width:14px;height:14px;flex:none}
+.ce-ico-lg{width:20px;height:20px;flex:none}
+
 .ce-chip{background:transparent;border:1px solid var(--ce-line);border-radius:var(--ce-r-sm);
   color:var(--ce-muted);font:inherit;font-size:12px;padding:5px 11px;cursor:pointer;
   transition:border-color .16s,color .16s}
