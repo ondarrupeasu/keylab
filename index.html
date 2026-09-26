@@ -8,8 +8,8 @@
   <meta name="theme-color" content="#14161a" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="casa-estilo.css?v=11" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="casa-estilo.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
   <header class="topbar">
@@ -55,7 +55,9 @@
       <section class="group">
         <h2 data-i18n="key.title">Chroma key</h2>
         <div class="row">
-          <button id="btnPick" class="btn" data-i18n="key.pick">Cuentagotas</button>
+          <button id="btnPick" class="btn pick-btn" title="Cuentagotas" aria-label="Cuentagotas">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.12 2.12 0 1 1 3 3L18 9l.4.4a2.12 2.12 0 1 1-3 3l-3.8-3.8a2.12 2.12 0 1 1 3-3l.4.4Z"/></svg>
+          </button>
           <span class="swatch-wrap">
             <span id="keySwatch" class="swatch" title="Color clave"></span>
             <input id="keyColor" type="color" value="#00b140" />
@@ -110,7 +112,10 @@
           <button id="btnPlate" class="btn" data-i18n="plate.capture">Capturar fondo vacío</button>
           <button id="btnPlateClear" class="btn" data-i18n="plate.clear" hidden>Quitar</button>
         </div>
-        <label class="check" id="plateUseWrap" hidden><input type="checkbox" id="plateUse" checked /> <span data-i18n="plate.use">Keyear por diferencia</span></label>
+        <div class="ce-sw" id="plateUseWrap" hidden>
+          <span class="ce-track" id="plateTrack"><span class="ce-knob"></span></span>
+          <span data-i18n="plate.use">Keyear por diferencia</span>
+        </div>
         <p class="hint" data-i18n="plate.hint">Ve a un fotograma SIN sujeto (fondo vacío) y captúralo. El key comparará cada píxel con ese fondo: aguanta la iluminación desigual.</p>
       </section>
 
@@ -158,18 +163,24 @@
             <button id="framePrev" class="tbtn" title="Fotograma anterior">◄</button>
             <input id="timeline" type="range" min="0" max="0" step="0.001" value="0" />
             <button id="frameNext" class="tbtn" title="Fotograma siguiente">►</button>
-            <select id="fpsSel" class="fpssel" title="Fotogramas por segundo">
-              <option value="auto">Auto</option>
-              <option value="23.976">23.976</option>
-              <option value="24">24</option>
-              <option value="25">25</option>
-              <option value="29.97">29.97</option>
-              <option value="30">30</option>
-              <option value="48">48</option>
-              <option value="50">50</option>
-              <option value="59.94">59.94</option>
-              <option value="60">60</option>
-            </select>
+            <div class="ce-field fps-field" id="fpsField">
+              <div class="ce-combo" id="fpsCombo" title="Fotogramas por segundo">
+                <span id="fpsLabel">Auto</span>
+                <svg class="ce-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="ce-menu" id="fpsMenu" hidden>
+                <div data-v="auto" class="ce-sel">Auto</div>
+                <div data-v="23.976">23.976</div>
+                <div data-v="24">24</div>
+                <div data-v="25">25</div>
+                <div data-v="29.97">29.97</div>
+                <div data-v="30">30</div>
+                <div data-v="48">48</div>
+                <div data-v="50">50</div>
+                <div data-v="59.94">59.94</div>
+                <div data-v="60">60</div>
+              </div>
+            </div>
             <span class="tcode" id="timecode">0:00.00</span>
           </div>
           <p class="hint frozen-hint" id="frozenHint" data-i18n="media.frozen" hidden>Modo fotograma congelado: mueve el timeline y elige el cuadro. No se reproduce en continuo.</p>
@@ -208,7 +219,7 @@
   </div>
 
   <script src="scopes.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=14"></script>
   <!-- Reportar problema / sugerir mejora -> report.cinemafilmak.com -> Telegram -->
   <script src="report.js?v=12" data-app="KeyLab"></script>
 <!-- statsr: contador de visitas (sin cookies, sin IP, solo cuenta) -->

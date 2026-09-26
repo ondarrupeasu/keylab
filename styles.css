@@ -1,11 +1,16 @@
-/* Tokens de la familia: casa-estilo.css (compartido). Aquí solo alias a los
+/* Tokens de la familia: casa-estilo.css (--ce-*, prefijado). Aquí alias a los
    nombres que ya usa KeyLab, para retintar sin tocar el resto del CSS. */
 :root {
-  --bg-2: var(--panel);
-  --coral: var(--accent);
-  --coral-2: var(--accent-hi);
-  --coral-dim: var(--accent-wash);
-  --radius: var(--r-lg);
+  --bg: var(--ce-bg);
+  --bg-2: var(--ce-panel);
+  --panel: var(--ce-panel);
+  --line: var(--ce-line);
+  --text: var(--ce-text);
+  --muted: var(--ce-muted);
+  --coral: var(--ce-accent);
+  --coral-2: var(--ce-accent-hi);
+  --coral-dim: var(--ce-accent-wash);
+  --radius: var(--ce-r-lg);
 }
 
 * { box-sizing: border-box; }
@@ -111,6 +116,8 @@ body {
 .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
 
 /* swatch + color input */
+.pick-btn { padding: 7px 9px; }
+.pick-btn svg { display: block; }
 .swatch-wrap { position: relative; display: inline-flex; }
 .swatch {
   width: 30px; height: 30px;
@@ -132,19 +139,18 @@ body {
   font-size: 12px; color: var(--muted); margin-bottom: 6px;
 }
 .slider output { color: var(--coral-2); font-variant-numeric: tabular-nums; }
+/* sliders: relleno coral hasta --p (mismo look que casa-estilo, aquí sin scope) */
 input[type="range"] {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 4px; border-radius: 4px;
-  background: var(--line); outline: none;
+  width: 100%; height: 3px; border-radius: 2px; outline: 0;
+  background: linear-gradient(90deg, var(--coral) 0 var(--p, 0%), var(--ce-input) var(--p, 0%) 100%);
 }
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--coral); cursor: pointer; border: 2px solid var(--bg-2);
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--coral); cursor: pointer; box-shadow: 0 0 0 4px rgba(255,90,77,.14);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--coral); cursor: pointer; border: 2px solid var(--bg-2);
+  width: 16px; height: 16px; border: 0; border-radius: 50%; background: var(--coral); cursor: pointer;
 }
 
 /* views */
@@ -204,16 +210,10 @@ input[type="range"]::-moz-range-thumb {
   min-width: 62px;
   text-align: right;
 }
-.fpssel {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  color: var(--text);
-  border-radius: 8px;
-  font-size: 12px;
-  padding: 5px 6px;
-  cursor: pointer;
-}
-.fpssel:hover { border-color: var(--coral); }
+/* combo de fps: compacto y abriendo hacia arriba (el transport queda abajo) */
+.fps-field { min-width: 76px; flex: 0 0 auto; }
+.transport .ce-combo { padding: 6px 8px; font-size: 12px; }
+#fpsMenu { top: auto; bottom: calc(100% + 6px); }
 .frozen-hint { text-align: center; margin: 0; }
 .frozen-hint[hidden] { display: none; }
 

@@ -800,7 +800,7 @@ function captureCleanPlate() {
   state.plate.has = true; state.plate.use = true;
   $('btnPlateClear').hidden = false;
   $('plateUseWrap').hidden = false;
-  $('plateUse').checked = true;
+  $('plateTrack').classList.add('ce-on');
   render(); updateNodeMap();
 }
 
@@ -855,8 +855,10 @@ const media = { isVideo: false, fps: 25, fpsAuto: true, fpsDetected: null, seeki
 function applyFps() {
   media.fps = media.fpsAuto ? (media.fpsDetected || 25) : media.fps;
   $('timeline').step = String(1 / media.fps);
-  const auto = document.querySelector('#fpsSel option[value="auto"]');
-  auto.textContent = media.fpsDetected ? 'Auto (' + fpsLabel(media.fpsDetected) + ')' : 'Auto';
+  const autoItem = document.querySelector('#fpsMenu [data-v="auto"]');
+  if (autoItem) autoItem.textContent = media.fpsDetected ? 'Auto (' + fpsLabel(media.fpsDetected) + ')' : 'Auto';
+  const lbl = $('fpsLabel');
+  if (lbl) lbl.textContent = media.fpsAuto ? 'Auto' : String(media.fps);
 }
 
 function teardownVideo() {
@@ -877,6 +879,13 @@ function fmtTime(s) {
   return m + ':' + sec.toFixed(2).padStart(5, '0');
 }
 
+// relleno coral del slider (casa-estilo usa --p para pintar hasta ese %)
+function sliderFill(el) {
+  const mn = parseFloat(el.min) || 0, mx = parseFloat(el.max);
+  const p = (mx > mn) ? ((parseFloat(el.value) - mn) / (mx - mn) * 100) : 0;
+  el.style.setProperty('--p', p.toFixed(1) + '%');
+}
+
 function seekTo(tSec) {
   const t = Math.max(0, Math.min(video.duration || 0, tSec));
   if (media.seeking) { media.pending = t; return; }   // coalescer mientras se arrastra
@@ -887,6 +896,7 @@ function seekTo(tSec) {
 video.addEventListener('seeked', () => {
   drawVideoFrame();
   $('timeline').value = String(video.currentTime);
+  sliderFill($('timeline'));
   $('timecode').textContent = fmtTime(video.currentTime);
   media.seeking = false;
   if (media.pending != null) { const p = media.pending; media.pending = null; seekTo(p); }
@@ -1325,6 +1335,7 @@ function resetAll() {
   $('despill').value = '0'; $('despillOut').textContent = '0.00';
   $('wrap').value = '0'; $('wrapOut').textContent = '0.00';
   $('wrapRadius').value = '8'; $('wrapRadiusOut').textContent = '8';
+  document.querySelectorAll('input[type="range"]').forEach(sliderFill);
   $('keyColor').value = '#00b140'; $('keySwatch').style.background = '#00b140';
   $('btnPick').classList.remove('on'); $('canvasWrap').classList.remove('picking');
   // garbage matte + clean plate
@@ -1332,6 +1343,7 @@ function resetAll() {
   state.plate = { has: false, use: false };
   $('btnMatteInvert').classList.remove('on');
   $('btnPlateClear').hidden = true; $('plateUseWrap').hidden = true;
+  $('plateTrack').classList.remove('ce-on');
   updateMatteLabel();
   updateMatteTexture(); drawOverlay();
   document.querySelectorAll('.view').forEach((x) => x.classList.toggle('active', x.dataset.mode === '0'));
@@ -1376,13 +1388,27 @@ function savePNG() {
 $('btnPng').addEventListener('click', savePNG);
 
 // timeline (scrub) + fotograma ±1
-$('timeline').addEventListener('input', (e) => seekTo(parseFloat(e.target.value)));
+$('timeline').addEventListener('input', (e) => { sliderFill(e.target); seekTo(parseFloat(e.target.value)); });
 $('framePrev').addEventListener('click', () => seekTo(video.currentTime - 1 / media.fps));
 $('frameNext').addEventListener('click', () => seekTo(video.currentTime + 1 / media.fps));
-$('fpsSel').addEventListener('change', (e) => {
-  if (e.target.value === 'auto') { media.fpsAuto = true; }
-  else { media.fpsAuto = false; media.fps = parseFloat(e.target.value); }
-  applyFps();
+// combo de fps (desplegable con chevron que gira)
+$('fpsCombo').addEventListener('click', () => {
+  const willOpen = $('fpsMenu').hidden;
+  $('fpsMenu').hidden = !willOpen;
+  $('fpsCombo').classList.toggle('ce-open', willOpen);
+});
+$('fpsMenu').querySelectorAll('[data-v]').forEach((it) => {
+  it.addEventListener('click', () => {
+    const v = it.dataset.v;
+    if (v === 'auto') media.fpsAuto = true;
+    else { media.fpsAuto = false; media.fps = parseFloat(v); }
+    $('fpsMenu').querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('ce-sel', x === it));
+    $('fpsMenu').hidden = true; $('fpsCombo').classList.remove('ce-open');
+    applyFps();
+  });
+});
+document.addEventListener('click', (e) => {
+  if (!$('fpsField').contains(e.target)) { $('fpsMenu').hidden = true; $('fpsCombo').classList.remove('ce-open'); }
 });
 
 // drag & drop sobre el escenario
@@ -1446,7 +1472,7 @@ window.addEventListener('pointermove', (e) => {
 });
 window.addEventListener('pointerup', () => { matteDrag = -1; });
 function updatePickLabel() {
-  $('btnPick').textContent = state.picking ? t('pick.on') : t('key.pick');
+  $('btnPick').title = state.picking ? t('pick.on') : t('key.pick');   // icono fijo; el texto va al tooltip
 }
 
 // color manual
@@ -1496,18 +1522,23 @@ $('btnPlate').addEventListener('click', captureCleanPlate);
 $('btnPlateClear').addEventListener('click', () => {
   state.plate.has = false; state.plate.use = false;
   $('btnPlateClear').hidden = true; $('plateUseWrap').hidden = true;
+  $('plateTrack').classList.remove('ce-on');
   render(); updateNodeMap();
 });
-$('plateUse').addEventListener('change', (e) => {
-  state.plate.use = e.target.checked; render(); updateNodeMap();
+$('plateUseWrap').addEventListener('click', () => {
+  state.plate.use = !state.plate.use;
+  $('plateTrack').classList.toggle('ce-on', state.plate.use);
+  render(); updateNodeMap();
 });
 $('wrap').addEventListener('input', (e) => {
+  sliderFill(e.target);
   state.wrap = parseFloat(e.target.value);
   $('wrapOut').textContent = state.wrap.toFixed(2);
   render();
   updateNodeMap();
 });
 $('wrapRadius').addEventListener('input', (e) => {
+  sliderFill(e.target);
   state.wrapRadius = parseFloat(e.target.value);
   $('wrapRadiusOut').textContent = String(state.wrapRadius | 0);
   render();
@@ -1515,17 +1546,20 @@ $('wrapRadius').addEventListener('input', (e) => {
 
 // sliders
 $('despill').addEventListener('input', (e) => {
+  sliderFill(e.target);
   state.despill = parseFloat(e.target.value);
   $('despillOut').textContent = state.despill.toFixed(2);
   render();
   updateNodeMap();
 });
 $('tolerance').addEventListener('input', (e) => {
+  sliderFill(e.target);
   state.tol = parseFloat(e.target.value);
   $('tolOut').textContent = state.tol.toFixed(3);
   render();
 });
 $('softness').addEventListener('input', (e) => {
+  sliderFill(e.target);
   state.soft = parseFloat(e.target.value);
   $('softOut').textContent = state.soft.toFixed(3);
   render();
@@ -1564,6 +1598,7 @@ document.querySelectorAll('.lang').forEach((b) => {
 /* ------------------------------------------------------------------ */
 applyLang();
 updateKeyChan();
+document.querySelectorAll('input[type="range"]').forEach(sliderFill);
 render();
 
 // registro del service worker (offline)
