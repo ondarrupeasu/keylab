@@ -974,8 +974,8 @@ function loadVideoFile(file) {
 function loadFile(file) {
   if (!file) return;
   if (state.webcam) stopWebcam();
-  if (file.type.startsWith('video/')) loadVideoFile(file);
-  else if (file.type.startsWith('image/')) loadImageFile(file);
+  if (file.type.startsWith('video/')) { loadVideoFile(file); setActiveSource('btnLoad'); }
+  else if (file.type.startsWith('image/')) { loadImageFile(file); setActiveSource('btnLoad'); }
 }
 
 /* --- webcam / cámara virtual (getUserMedia): en directo, con congelar --- */
@@ -1014,7 +1014,7 @@ async function startWebcam() {
     video.srcObject = stream;
     await video.play();
     state.webcam = true; state.webcamPaused = false;
-    $('btnWebcam').classList.add('on');
+    setActiveSource('btnWebcam');
     $('webcamBar').hidden = false;
     $('btnFreeze').textContent = t('webcam.freeze');
     setView(1);                 // arranca en Original (paso a paso)
@@ -1027,7 +1027,7 @@ function stopWebcam() {
   state.webcam = false;
   cancelAnimationFrame(webcamRAF);
   stopWebcamStream();
-  $('btnWebcam').classList.remove('on');
+  $('btnWebcam').classList.remove('primary');
   $('webcamBar').hidden = true;
 }
 function toggleFreeze() {
@@ -1277,6 +1277,12 @@ function loadScene(cfg) {
 }
 function loadDemo() { loadScene({ src: 'demo.jpg' }); }
 
+// resalta la fuente activa (Demo / Webcam / Cargar). null = ninguna (p.ej. un ejemplo)
+function setActiveSource(id) {
+  ['btnDemo', 'btnWebcam', 'btnLoad'].forEach((b) => $(b).classList.toggle('primary', b === id));
+  if (id) document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
+}
+
 /* ------------------------------------------------------------------ */
 /*  Cuentagotas                                                        */
 /* ------------------------------------------------------------------ */
@@ -1302,7 +1308,7 @@ const $ = (id) => document.getElementById(id);
 
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
 $('fileInput').addEventListener('change', (e) => { loadFile(e.target.files[0]); });
-$('btnDemo').addEventListener('click', loadDemo);
+$('btnDemo').addEventListener('click', () => { loadDemo(); setActiveSource('btnDemo'); });
 $('btnWebcam').addEventListener('click', () => { state.webcam ? stopWebcam() : startWebcam(); });
 $('btnFreeze').addEventListener('click', toggleFreeze);
 
@@ -1313,6 +1319,7 @@ const EXAMPLES = {
 };
 document.querySelectorAll('.ex').forEach((b) => {
   b.addEventListener('click', () => {
+    setActiveSource(null);   // la fuente pasa a ser el ejemplo
     document.querySelectorAll('.ex').forEach((x) => x.classList.remove('active'));
     b.classList.add('active');
     loadScene(EXAMPLES[b.dataset.ex]);
@@ -1355,6 +1362,7 @@ function resetAll() {
   updateKeyChan(); updateViewHint(); updatePickLabel(); updateExampleHint();
   canvas.width = 300; canvas.height = 150;
   render();
+  loadDemo(); setActiveSource('btnDemo');   // estado inicial = demo cargada
 }
 $('btnReset').addEventListener('click', resetAll);
 
@@ -1600,6 +1608,8 @@ applyLang();
 updateKeyChan();
 document.querySelectorAll('input[type="range"]').forEach(sliderFill);
 render();
+loadDemo();                    // arranca con la demo (croma verde) cargada
+setActiveSource('btnDemo');    // ...y Demo marcada como fuente activa
 
 // registro del service worker (offline)
 if ('serviceWorker' in navigator) {

@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="casa-estilo.css?v=15" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
   <header class="topbar">
@@ -35,9 +35,11 @@
       <section class="group">
         <h2 data-i18n="src.title">Imagen</h2>
         <div class="row">
-          <button id="btnLoad" class="btn primary" data-i18n="src.load">Cargar imagen o vídeo…</button>
-          <button id="btnDemo" class="btn" data-i18n="src.demo">Demo</button>
+          <button id="btnDemo" class="btn primary" data-i18n="src.demo">Demo</button>
           <button id="btnWebcam" class="btn" data-i18n="src.webcam">Webcam</button>
+        </div>
+        <div class="row src-load-row">
+          <button id="btnLoad" class="btn" data-i18n="src.load">Cargar imagen o vídeo…</button>
         </div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden />
         <p class="hint" data-i18n="src.hint">Arrastra una imagen o vídeo aquí. Todo es local: nada se sube a internet.</p>
@@ -219,7 +221,7 @@
   </div>
 
   <script src="scopes.js?v=12"></script>
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
   <!-- Reportar problema / sugerir mejora -> report.cinemafilmak.com -> Telegram -->
   <script src="report.js?v=12" data-app="KeyLab"></script>
 <!-- statsr: contador de visitas (sin cookies, sin IP, solo cuenta) -->

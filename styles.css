@@ -96,6 +96,8 @@ body {
   font-weight: 700;
 }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.src-load-row { margin-top: 8px; }
+.src-load-row .btn { flex: 1; }
 
 .btn {
   background: var(--bg-2);
